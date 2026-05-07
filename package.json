@@ -3,7 +3,10 @@
   "private": true,
   "packageManager": "pnpm@10.33.3",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "sharp", "workerd", "unrs-resolver"]
+    "onlyBuiltDependencies": ["esbuild", "sharp", "workerd", "unrs-resolver"],
+    "patchedDependencies": {
+      "@cloudflare/next-on-pages@1.13.16": "patches/@cloudflare__next-on-pages@1.13.16.patch"
+    }
   },
   "scripts": {
     "db:reset": "pnpm --filter api run db:reset",
