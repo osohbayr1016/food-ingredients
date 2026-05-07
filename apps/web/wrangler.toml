@@ -1,4 +1,39 @@
+# Frontend runs as a Worker with static assets (avoids flaky Pages bulk-upload API).
+# From apps/web: pnpm run pages:build && wrangler deploy
+
 name = "food-ingredients-web"
+main = ".vercel/output/static/_worker.js/index.js"
 compatibility_date = "2025-05-06"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".vercel/output/static"
+workers_dev = true
+
+find_additional_modules = true
+
+[[rules]]
+type = "ESModule"
+globs = ["**/*.js"]
+fallthrough = true
+
+[[rules]]
+type = "Data"
+globs = ["**/*.bin"]
+fallthrough = true
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+[assets]
+directory = ".vercel/output/static"
+binding = "ASSETS"
+html_handling = "none"
+not_found_handling = "none"
+
+[vars]
+NEXT_PUBLIC_API_URL = "https://food-ingredients-api.osohoo691016.workers.dev"
+
+# Internal RPC to the API Worker (avoids public workers.dev subrequests from SSR).
+[[services]]
+binding = "API_SERVICE"
+service = "food-ingredients-api"

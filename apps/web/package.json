@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "pages:build": "next build && CF_PAGES_BUILD=1 next-on-pages",
-    "pages:deploy": "node ./scripts/patchWranglerPagesUpload.mjs && pnpm run pages:build && wrangler pages deploy --commit-dirty=true",
+    "pages:build": "next build && CF_PAGES_BUILD=1 next-on-pages && node ./scripts/patchNextOnPagesOutput.mjs && node ./scripts/writeAssetsIgnore.mjs",
+    "cf:deploy": "pnpm run pages:build && wrangler deploy",
+    "pages:deploy": "pnpm run cf:deploy",
     "start": "next start",
     "lint": "eslint"
   },

@@ -37,7 +37,7 @@ export function RecipeSaveHeart({
     let cancelled = false;
     (async () => {
       const res = await clientFetch("/saved");
-      const payload = await res.json();
+      const payload = (await res.json()) as { saved?: { id: string }[] };
       const list = payload.saved ?? [];
       if (!cancelled) {
         setSaved(Array.isArray(list) && list.some((r: { id: string }) => r.id === recipeId));
