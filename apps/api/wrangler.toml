@@ -1,0 +1,22 @@
+name = "food-ingredients-api"
+main = "src/index.ts"
+compatibility_date = "2025-05-06"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "food-ingredients"
+database_id = "350cde30-5ddf-4c92-a30c-8cd4e3375c83"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "food-ingredients-images"
+
+[vars]
+ADMIN_SECRET = "dev-admin-secret-change-me"
+PUBLIC_ORIGINS = "http://localhost:3000,https://food-ingredients-web.pages.dev"
+R2_PUBLIC_BASE_URL = "https://pub-example.r2.dev"
+R2_BUCKET_NAME = "food-ingredients-images"
+R2_ACCOUNT_ID = ""
+R2_ACCESS_KEY_ID = ""
+R2_SECRET_ACCESS_KEY = ""

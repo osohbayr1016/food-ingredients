@@ -1,0 +1,14 @@
+diff --git a/dist/index.js b/dist/index.js
+index 5ee7d946e53665c918fe27abc3d6d86417ae9d9b..1791d3a60e6fce4e7c1fd0822bab5a1e121d6347 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -12841,8 +12841,8 @@ async function checkInvalidFunctions(collectedFunctions, opts) {
+   const usingAppRouter = isUsingAppRouter(opts.vercelConfig);
+   const usingPagesRouter = isUsingPagesRouter(opts.vercelConfig);
+   if (usingAppRouter && !usingPagesRouter) {
+-    await tryToFixAppRouterNotFoundFunction(collectedFunctions);
+     await fixAppRouterInvalidErrorFunctions(collectedFunctions);
++    await tryToFixAppRouterNotFoundFunction(collectedFunctions);
+   }
+   await fixActionInvalidFuncFunctions(collectedFunctions);
+   await tryToFixI18nFunctions(collectedFunctions, opts);

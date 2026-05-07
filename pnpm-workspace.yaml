@@ -1,0 +1,4 @@
+packages:
+  - "apps/*"
+patchedDependencies:
+  '@cloudflare/next-on-pages@1.13.16': patches/@cloudflare__next-on-pages@1.13.16.patch
