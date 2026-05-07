@@ -1,7 +1,5 @@
 "use client";
 
-export const runtime = "edge";
-
 export default function UserErrorBoundary({
   error,
   reset,

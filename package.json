@@ -1,10 +1,15 @@
 {
   "name": "food-ingredients",
   "private": true,
+  "packageManager": "pnpm@10.33.3",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "sharp", "workerd", "unrs-resolver"]
+  },
   "scripts": {
     "db:reset": "pnpm --filter api run db:reset",
     "dev": "pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
-    "lint": "pnpm -r run lint"
+    "lint": "pnpm -r run lint",
+    "cf:pages-build": "node apps/web/scripts/patchWranglerPagesUpload.mjs && pnpm --filter web run pages:build"
   }
 }
