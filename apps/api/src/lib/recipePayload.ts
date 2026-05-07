@@ -5,6 +5,8 @@ export type RecipeRow = {
   cook_time: number;
   difficulty: number;
   image_r2_key?: string | null;
+  /** JSON array string, e.g. `["recipes/id/k1.png","recipes/id/k2.jpg"]` */
+  gallery_r2_keys?: string | null;
   description: string;
   tips?: string | null;
   serves: number;

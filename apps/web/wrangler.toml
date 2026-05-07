@@ -32,6 +32,8 @@ not_found_handling = "none"
 
 [vars]
 NEXT_PUBLIC_API_URL = "https://food-ingredients-api.osohoo691016.workers.dev"
+# Same public base as API R2_PUBLIC_BASE_URL (R2 → bucket → public r2.dev / custom domain; no trailing slash).
+NEXT_PUBLIC_R2_PUBLIC_BASE_URL = "https://pub-10e5fb7fa4594b528d76dcc4cc0272a4.r2.dev"
 
 # Internal RPC to the API Worker (avoids public workers.dev subrequests from SSR).
 [[services]]

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CookingFinishDialog } from "@/components/cooking/CookingFinishDialog";
 import { CookingProgress } from "@/components/cooking/CookingProgress";
 import { CookingSlideDeck } from "@/components/cooking/CookingSlideDeck";
+import { CookingStepControls } from "@/components/cooking/CookingStepControls";
 import { IngredientSheet } from "@/components/cooking/IngredientSheet";
 import { TimerBubbleStack } from "@/components/cooking/TimerBubble";
 import { useBubbleTimers } from "@/hooks/useBubbleTimers";
@@ -83,8 +84,9 @@ export function CookingExperience({
     <div className="relative min-h-dvh bg-zinc-950 text-zinc-50">
       <CookingProgress index={index} total={total} />
       <Link
+        replace
         href={`/recipe/${data.recipe.id}`}
-        className="fixed top-[calc(env(safe-area-inset-top)+12px)] left-4 z-50 rounded-full border border-zinc-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-zinc-800 shadow-sm touch-manipulation"
+        className="fixed top-[calc(env(safe-area-inset-top)+12px)] left-4 z-50 rounded-full border border-zinc-200 bg-white/95 px-3 py-2 text-sm font-semibold text-zinc-900 shadow-md touch-manipulation active:bg-white"
       >
         ← Буцах
       </Link>
@@ -103,25 +105,14 @@ export function CookingExperience({
           />
         )}
       />
-      <button
-        type="button"
-        className="fixed left-2 top-1/2 -translate-y-1/2 h-32 w-12 z-30 touch-manipulation"
-        aria-label="Өмнөх"
-        onClick={() => setIndex((v) => Math.max(0, v - 1))}
+      <CookingStepControls
+        recipeId={data.recipe.id}
+        index={index}
+        total={total}
+        onPrev={() => setIndex((v) => Math.max(0, v - 1))}
+        onNext={() => setIndex((v) => Math.min(total - 1, v + 1))}
+        onIngredients={() => setSheet(true)}
       />
-      <button
-        type="button"
-        className="fixed right-2 top-1/2 -translate-y-1/2 h-32 w-12 z-30 touch-manipulation"
-        aria-label="Дараах"
-        onClick={() => setIndex((v) => Math.min(total - 1, v + 1))}
-      />
-      <button
-        type="button"
-        className="fixed bottom-[calc(env(safe-area-inset-bottom)+96px)] left-1/2 -translate-x-1/2 rounded-full border border-white/20 px-4 py-2 text-xs touch-manipulation z-30"
-        onClick={() => setSheet(true)}
-      >
-        Орцнууд
-      </button>
       <TimerBubbleStack
         timers={timers}
         onDismiss={clear}

@@ -1,5 +1,6 @@
 "use client";
 
+import { PantryFabIcon } from "@/components/layout/PantryFabIcon";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -94,14 +95,17 @@ export function UserBottomNav() {
           <div className="relative flex w-16 shrink-0 flex-col items-center justify-end -mt-7">
             <Link
               href="/suggest"
-              aria-label="Match by ingredients"
-              className="flex h-14 w-14 items-center justify-center rounded-full text-2xl font-light text-white shadow-lg shadow-rose-400/40 touch-manipulation"
+              aria-label="Гар дээрх материалаар жор тохируулах — Pantry match"
+              className="flex h-14 w-14 items-center justify-center rounded-full shadow-lg shadow-rose-400/40 touch-manipulation"
               style={{ backgroundColor: primary }}
             >
-              +
+              <PantryFabIcon />
             </Link>
-            <span className="mt-0.5 text-[10px] font-medium text-transparent">
-              —
+            <span
+              className="mt-0.5 max-w-18 truncate text-center text-[10px] font-medium text-zinc-500"
+              style={{ color: here("/suggest") ? primary : undefined }}
+            >
+              Pantry
             </span>
           </div>
           <Link

@@ -1,6 +1,7 @@
 "use client";
 
 import { clientFetch } from "@/lib/clientApi";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function CookingFinishDialog({
@@ -15,6 +16,7 @@ export function CookingFinishDialog({
   const [rating, setRating] = useState(5);
   const [note, setNote] = useState("");
   const [pending, setPending] = useState(false);
+  const router = useRouter();
 
   async function save() {
     try {
@@ -29,6 +31,7 @@ export function CookingFinishDialog({
         }),
       });
       onClose();
+      router.replace(`/recipe/${recipeId}`);
     } catch {
       setPending(false);
     }

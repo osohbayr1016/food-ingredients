@@ -6,6 +6,8 @@ export type RecipeListItem = {
   cook_time: number;
   difficulty: number;
   image_r2_key: string | null;
+  /** JSON array of R2 object keys for additional photos */
+  gallery_r2_keys?: string | null;
   description: string;
   tips: string | null;
   serves: number;

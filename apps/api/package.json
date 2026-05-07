@@ -4,7 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "db:reset": "wrangler d1 execute food-ingredients --local --file=db/seed.sql",
+    "r2:create": "wrangler r2 bucket create food-ingredients-images",
+    "r2:cors": "wrangler r2 bucket cors set food-ingredients-images --file ./r2-cors.json --force",
+    "secret:r2:account": "wrangler secret put R2_ACCOUNT_ID",
+    "secret:r2:access": "wrangler secret put R2_ACCESS_KEY_ID",
+    "secret:r2:secret": "wrangler secret put R2_SECRET_ACCESS_KEY",
+    "db:reset": "wrangler d1 execute food-ingredients --local --file=db/schema.sql && wrangler d1 execute food-ingredients --local --file=db/seed.sql",
+    "db:migrate:local": "wrangler d1 execute food-ingredients --local --file=db/0002_recipe_gallery.sql",
+    "db:migrate:remote": "wrangler d1 execute food-ingredients --remote --file=db/0002_recipe_gallery.sql",
     "deploy": "wrangler deploy",
     "build": "tsc --noEmit",
     "lint": "echo \"no lint configured\""

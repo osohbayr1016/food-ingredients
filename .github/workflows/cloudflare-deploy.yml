@@ -34,9 +34,11 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_R2_PUBLIC_BASE_URL: ${{ secrets.NEXT_PUBLIC_R2_PUBLIC_BASE_URL }}
         run: |
           missing=0
-          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID NEXT_PUBLIC_API_URL NEXT_PUBLIC_R2_PUBLIC_BASE_URL; do
             if [ -z "${!v}" ]; then echo "::error::Missing repository secret: $v"; missing=1; fi
           done
           [ "$missing" = "0" ]
@@ -51,6 +53,8 @@ jobs:
       - name: Build frontend (next-on-pages)
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          # Must match API wrangler R2_PUBLIC_BASE_URL (bucket public r2.dev URL, no trailing slash).
+          NEXT_PUBLIC_R2_PUBLIC_BASE_URL: ${{ secrets.NEXT_PUBLIC_R2_PUBLIC_BASE_URL }}
         run: pnpm --filter web run pages:build
 
       - name: Deploy frontend Worker (static assets + _worker.js)

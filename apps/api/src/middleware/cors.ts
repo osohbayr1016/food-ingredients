@@ -20,7 +20,7 @@ export const corsMw = createMiddleware<{ Bindings: Env }>(async (c, next) => {
   c.header("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
   c.header(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Device-Id",
+    "Content-Type, Authorization, X-Device-Id, X-Recipe-Id",
   );
   if (c.req.method === "OPTIONS") {
     return c.body(null, 204);

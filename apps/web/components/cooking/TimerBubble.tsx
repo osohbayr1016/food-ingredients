@@ -39,7 +39,7 @@ export function TimerBubbleStack({
   return (
     <div
       className="fixed left-4 right-4 z-40 pointer-events-none"
-      style={{ bottom: `calc(env(safe-area-inset-bottom) + 140px)` }}
+      style={{ bottom: `calc(env(safe-area-inset-bottom) + 210px)` }}
     >
       <div className="pointer-events-auto space-y-2 max-w-xl mx-auto">
         {timers.map((timer) => (

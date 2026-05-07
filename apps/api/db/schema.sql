@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS recipes (
   cook_time INTEGER NOT NULL DEFAULT 0,
   difficulty INTEGER NOT NULL DEFAULT 2,
   image_r2_key TEXT,
+  gallery_r2_keys TEXT,
   description TEXT NOT NULL DEFAULT '',
   tips TEXT,
   serves INTEGER NOT NULL DEFAULT 4,

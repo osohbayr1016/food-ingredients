@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { RecipeDetailStatRow } from "@/components/recipe/RecipeDetailBlocks";
 import { RecipeDetailHero } from "@/components/recipe/RecipeDetailHero";
+import { RecipeDetailGallery } from "@/components/recipe/RecipeDetailGallery";
 import { DifficultyDots } from "@/components/recipe/RecipeCard";
 import { IngredientGroupedList } from "@/components/recipe/IngredientGroupedList";
 import { ServingSlider } from "@/components/recipe/ServingSlider";
@@ -41,6 +42,8 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
       <p className="text-sm leading-relaxed text-zinc-700">
         {data.recipe.description}
       </p>
+
+      <RecipeDetailGallery galleryRaw={data.recipe.gallery_r2_keys} />
 
       <RecipeDetailStatRow
         prepTime={data.recipe.prep_time}
@@ -116,6 +119,7 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
       </section>
 
       <Link
+        replace
         href={`/recipe/${data.recipe.id}/cook?serves=${serves}`}
         className="fixed left-1/2 z-30 inline-flex min-w-[220px] -translate-x-1/2 justify-center rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg shadow-rose-300/50 touch-manipulation"
         style={{

@@ -1,0 +1,19 @@
+# Local API (`pnpm dev`): copy this file to `.dev.vars` (gitignored) in this folder.
+#
+# Values:
+# - R2_ACCOUNT_ID — Cloudflare dashboard right sidebar (Account ID), or Workers & Pages overview.
+# - R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY — Dashboard → R2 → Overview →
+#   "Manage R2 API Tokens" → Create API token → Permissions: Object Read & Write,
+#   specify bucket `food-ingredients-images` (or account-wide), S3-compatible.
+# - R2_PUBLIC_BASE_URL — R2 → bucket → Settings → Public access → copy R2.dev URL (no trailing /).
+#
+# Production Worker: do NOT commit `.dev.vars`. From `apps/api` run (each prompts once):
+#   pnpm secret:r2:account
+#   pnpm secret:r2:access
+#   pnpm secret:r2:secret
+# Also set R2_PUBLIC_BASE_URL in wrangler.toml [vars] (or secret if you prefer) to your real public URL.
+
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_PUBLIC_BASE_URL=https://pub-10e5fb7fa4594b528d76dcc4cc0272a4.r2.dev

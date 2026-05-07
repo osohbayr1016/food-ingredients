@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { buildIngredientPreview } from "../lib/suggestIngredientPreview";
 import type { Env } from "../bindings";
 
 function normNames(body: unknown) {
@@ -71,17 +72,18 @@ suggest.post("/suggest", async (c) => {
 
   const nameSet = new Set(names);
   const canonSet = new Set(canonIds);
-  type Ing = {
-    recipe_id: string;
-    ingredient_canonical_id: string | null;
-    name: string;
-  };
+  type Ing = import("../lib/suggestIngredientPreview").SuggestIngRow;
   const ingMap = new Map<string, Ing[]>();
   if (rows.length) {
     const idsPh = placeholders(rows.length);
     const list = rows.map((r) => r.recipe_id);
     const ir = await c.env.DB.prepare(
-      `SELECT id, recipe_id, ingredient_canonical_id, name FROM ingredients WHERE recipe_id IN ${idsPh}`,
+      `SELECT i.recipe_id, i.ingredient_canonical_id, i.name, i.quantity, i.unit, i.note, i.sort_order,
+              c.name AS category_name
+       FROM ingredients i
+       JOIN ingredient_categories c ON c.id = i.category_id
+       WHERE i.recipe_id IN ${idsPh}
+       ORDER BY i.recipe_id ASC, i.sort_order ASC`,
     )
       .bind(...list)
       .all<Ing>();
@@ -91,35 +93,54 @@ suggest.post("/suggest", async (c) => {
     }
   }
 
+  type Meta = {
+    id: string;
+    title: string;
+    cuisine: string;
+    prep_time: number;
+    cook_time: number;
+    difficulty: number;
+    serves: number;
+    image_r2_key: string | null;
+    description: string;
+  };
+  const metaMap = new Map<string, Meta>();
+  if (rows.length) {
+    const idsPh = placeholders(rows.length);
+    const ids = rows.map((r) => r.recipe_id);
+    const metaRows = await c.env.DB.prepare(
+      `SELECT id, title, cuisine, prep_time, cook_time, difficulty, serves, image_r2_key, description
+       FROM recipes WHERE id IN ${idsPh}`,
+    )
+      .bind(...ids)
+      .all<Meta>();
+    for (const m of metaRows.results ?? []) {
+      metaMap.set(String(m.id), m);
+    }
+  }
+
   const out = rows.map(({ recipe_id: recipeId }) => {
     const ings = ingMap.get(recipeId) ?? [];
-    const matchedIngredients: string[] = [];
-    const missingIngredients: string[] = [];
-    let matchedCnt = 0;
+    const { matchedCount: matchedCnt, preview: ingredients_preview } =
+      buildIngredientPreview(ings, nameSet, canonSet);
     const totalIngredients = ings.length;
-    for (const ing of ings) {
-      const canonMatch =
-        !!(ing.ingredient_canonical_id &&
-          canonSet.has(ing.ingredient_canonical_id));
-      const nameHit = nameSet.has(ing.name.toLowerCase().trim());
-      const hit = canonMatch || nameHit;
-      if (hit) {
-        matchedCnt += 1;
-        matchedIngredients.push(ing.name);
-      } else {
-        missingIngredients.push(ing.name);
-      }
-    }
     const pct = totalIngredients ? matchedCnt / totalIngredients : 0;
     const titleRow = rows.find((r) => r.recipe_id === recipeId)!;
+    const m = metaMap.get(recipeId);
     return {
       recipe_id: recipeId,
-      title: titleRow.title,
+      title: m?.title ?? titleRow.title,
+      cuisine: m?.cuisine ?? "",
+      description: m?.description ?? "",
+      prep_time: m?.prep_time ?? 0,
+      cook_time: m?.cook_time ?? 0,
+      difficulty: m?.difficulty ?? 2,
+      serves: m?.serves ?? 4,
+      image_r2_key: m?.image_r2_key ?? null,
       match_ratio: pct,
       matched_count: matchedCnt,
       total_ingredients: totalIngredients,
-      matched_ingredients: matchedIngredients,
-      missing_ingredients: missingIngredients,
+      ingredients_preview,
     };
   });
 

@@ -62,8 +62,8 @@ export async function insertRecipe(db: D1Database, recipeId: string, patch: Reci
   const stmts = [
     db.prepare(
       `INSERT INTO recipes (
-        id, title, cuisine, prep_time, cook_time, difficulty, image_r2_key, description, tips, serves, is_published
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        id, title, cuisine, prep_time, cook_time, difficulty, image_r2_key, gallery_r2_keys, description, tips, serves, is_published
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     ).bind(
       recipeId,
       patch.recipe.title,
@@ -72,6 +72,7 @@ export async function insertRecipe(db: D1Database, recipeId: string, patch: Reci
       patch.recipe.cook_time,
       patch.recipe.difficulty,
       patch.recipe.image_r2_key ?? null,
+      patch.recipe.gallery_r2_keys ?? null,
       patch.recipe.description,
       patch.recipe.tips ?? null,
       patch.recipe.serves,
@@ -92,7 +93,7 @@ export async function applyRecipePatch(
   stmts.push(
     db.prepare(
       `UPDATE recipes SET title=?, cuisine=?, prep_time=?, cook_time=?, difficulty=?,
-           image_r2_key=?, description=?, tips=?, serves=?, is_published=?
+           image_r2_key=?, gallery_r2_keys=?, description=?, tips=?, serves=?, is_published=?
            WHERE id=?`,
     ).bind(
       patch.recipe.title,
@@ -101,6 +102,7 @@ export async function applyRecipePatch(
       patch.recipe.cook_time,
       patch.recipe.difficulty,
       patch.recipe.image_r2_key ?? null,
+      patch.recipe.gallery_r2_keys ?? null,
       patch.recipe.description,
       patch.recipe.tips ?? null,
       patch.recipe.serves,

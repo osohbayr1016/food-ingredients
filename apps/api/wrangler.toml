@@ -8,15 +8,18 @@ binding = "DB"
 database_name = "food-ingredients"
 database_id = "350cde30-5ddf-4c92-a30c-8cd4e3375c83"
 
+# Object storage binding (optional for Worker code paths; presign uses S3 API vars below).
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "food-ingredients-images"
 
 [vars]
 ADMIN_SECRET = "dev-admin-secret-change-me"
-PUBLIC_ORIGINS = "http://localhost:3000,https://food-ingredients-web.pages.dev,https://food-ingredients-web.osohoo691016.workers.dev"
-R2_PUBLIC_BASE_URL = "https://pub-example.r2.dev"
+# Exact browser Origins allowed for API + credentialed admin calls (add your production domain here).
+PUBLIC_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://food-ingredients-web.pages.dev,https://food-ingredients-web.osohoo691016.workers.dev"
+# Must match the bucket’s public R2.dev URL or custom domain (no trailing slash). Same value as web NEXT_PUBLIC_R2_PUBLIC_BASE_URL.
+R2_PUBLIC_BASE_URL = "https://pub-10e5fb7fa4594b528d76dcc4cc0272a4.r2.dev"
 R2_BUCKET_NAME = "food-ingredients-images"
-R2_ACCOUNT_ID = ""
-R2_ACCESS_KEY_ID = ""
-R2_SECRET_ACCESS_KEY = ""
+# R2 S3 credentials (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY): not in git.
+# Production → from apps/api: pnpm secret:r2:account, secret:r2:access, secret:r2:secret
+# Local → copy .dev.vars.example to .dev.vars
