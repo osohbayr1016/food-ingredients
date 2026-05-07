@@ -13,6 +13,7 @@
     "dev": "pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
-    "cf:pages-build": "node apps/web/scripts/patchWranglerPagesUpload.mjs && pnpm --filter web run pages:build"
+    "cf:pages-build": "node apps/web/scripts/patchWranglerPagesUpload.mjs && pnpm --filter web run pages:build",
+    "deploy": "pnpm run cf:pages-build && pnpm --filter web exec wrangler pages deploy .vercel/output/static"
   }
 }
