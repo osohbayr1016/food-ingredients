@@ -1,4 +1,5 @@
 import type { RecipePatchPayload } from "./recipePayload";
+import { enrichPatchIngredientCanonicals } from "./ingredientCanonicalResolve";
 
 function publishedVal(v?: number | boolean) {
   return v === true || v === 1 ? 1 : 0;
@@ -59,26 +60,29 @@ function childStatements(
 }
 
 export async function insertRecipe(db: D1Database, recipeId: string, patch: RecipePatchPayload) {
+  const enriched = await enrichPatchIngredientCanonicals(db, patch);
   const stmts = [
     db.prepare(
       `INSERT INTO recipes (
-        id, title, cuisine, prep_time, cook_time, difficulty, image_r2_key, gallery_r2_keys, description, tips, serves, is_published
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        id, title, cuisine, prep_time, cook_time, difficulty, image_r2_key, gallery_r2_keys, description, tips, serves, is_published, import_source, import_external_id
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     ).bind(
       recipeId,
-      patch.recipe.title,
-      patch.recipe.cuisine,
-      patch.recipe.prep_time,
-      patch.recipe.cook_time,
-      patch.recipe.difficulty,
-      patch.recipe.image_r2_key ?? null,
-      patch.recipe.gallery_r2_keys ?? null,
-      patch.recipe.description,
-      patch.recipe.tips ?? null,
-      patch.recipe.serves,
-      publishedVal(patch.recipe.is_published),
+      enriched.recipe.title,
+      enriched.recipe.cuisine,
+      enriched.recipe.prep_time,
+      enriched.recipe.cook_time,
+      enriched.recipe.difficulty,
+      enriched.recipe.image_r2_key ?? null,
+      enriched.recipe.gallery_r2_keys ?? null,
+      enriched.recipe.description,
+      enriched.recipe.tips ?? null,
+      enriched.recipe.serves,
+      publishedVal(enriched.recipe.is_published),
+      enriched.recipe.import_source ?? null,
+      enriched.recipe.import_external_id ?? null,
     ),
-    ...childStatements(db, recipeId, patch),
+    ...childStatements(db, recipeId, enriched),
   ];
   await db.batch(stmts);
 }
@@ -88,25 +92,38 @@ export async function applyRecipePatch(
   recipeId: string,
   patch: RecipePatchPayload,
 ) {
+  const enriched = await enrichPatchIngredientCanonicals(db, patch);
   const stmts: D1PreparedStatement[] = [];
+
+  const src =
+    enriched.recipe.import_source !== undefined
+      ? enriched.recipe.import_source
+      : null;
+  const ext =
+    enriched.recipe.import_external_id !== undefined
+      ? enriched.recipe.import_external_id
+      : null;
 
   stmts.push(
     db.prepare(
       `UPDATE recipes SET title=?, cuisine=?, prep_time=?, cook_time=?, difficulty=?,
-           image_r2_key=?, gallery_r2_keys=?, description=?, tips=?, serves=?, is_published=?
+           image_r2_key=?, gallery_r2_keys=?, description=?, tips=?, serves=?, is_published=?,
+           import_source=COALESCE(?, import_source), import_external_id=COALESCE(?, import_external_id)
            WHERE id=?`,
     ).bind(
-      patch.recipe.title,
-      patch.recipe.cuisine,
-      patch.recipe.prep_time,
-      patch.recipe.cook_time,
-      patch.recipe.difficulty,
-      patch.recipe.image_r2_key ?? null,
-      patch.recipe.gallery_r2_keys ?? null,
-      patch.recipe.description,
-      patch.recipe.tips ?? null,
-      patch.recipe.serves,
-      publishedVal(patch.recipe.is_published),
+      enriched.recipe.title,
+      enriched.recipe.cuisine,
+      enriched.recipe.prep_time,
+      enriched.recipe.cook_time,
+      enriched.recipe.difficulty,
+      enriched.recipe.image_r2_key ?? null,
+      enriched.recipe.gallery_r2_keys ?? null,
+      enriched.recipe.description,
+      enriched.recipe.tips ?? null,
+      enriched.recipe.serves,
+      publishedVal(enriched.recipe.is_published),
+      src,
+      ext,
       recipeId,
     ),
   );
@@ -114,7 +131,7 @@ export async function applyRecipePatch(
   stmts.push(db.prepare(`DELETE FROM recipe_tags WHERE recipe_id = ?`).bind(recipeId));
   stmts.push(db.prepare(`DELETE FROM ingredients WHERE recipe_id = ?`).bind(recipeId));
   stmts.push(db.prepare(`DELETE FROM steps WHERE recipe_id = ?`).bind(recipeId));
-  stmts.push(...childStatements(db, recipeId, patch));
+  stmts.push(...childStatements(db, recipeId, enriched));
 
   await db.batch(stmts);
 }

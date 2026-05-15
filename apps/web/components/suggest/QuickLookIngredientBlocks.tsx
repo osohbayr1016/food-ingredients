@@ -20,10 +20,12 @@ function groupByCategory(rows: IngredientPreviewLine[]) {
 export function QuickLookIngredientBlocks({
   missing,
   have,
+  qtyWarn,
   all,
 }: {
   missing: IngredientPreviewLine[];
   have: IngredientPreviewLine[];
+  qtyWarn: IngredientPreviewLine[];
   all: IngredientPreviewLine[];
 }) {
   return (
@@ -44,6 +46,31 @@ export function QuickLookIngredientBlocks({
                   >
                     <span className="font-medium text-zinc-900">{ing.name}</span>
                     <span className="shrink-0 tabular-nums text-zinc-700">
+                      {formatIngredientAmount(ing.quantity, ing.unit)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+      {qtyWarn.length > 0 && (
+        <section className="space-y-2">
+          <h3 className="text-sm font-semibold text-amber-800">
+            Хэмжээ таарахгүй байж болно
+          </h3>
+          {groupByCategory(qtyWarn).map(([cat, rows]) => (
+            <div key={`q-${cat}`} className="space-y-2">
+              <p className="text-xs font-semibold text-zinc-400">{cat}</p>
+              <ul className="space-y-1.5">
+                {rows.map((ing, i) => (
+                  <li
+                    key={`q-${ing.name}-${i}`}
+                    className="flex justify-between gap-3 rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2 text-sm"
+                  >
+                    <span className="font-medium text-zinc-900">{ing.name}</span>
+                    <span className="shrink-0 tabular-nums text-amber-900">
                       {formatIngredientAmount(ing.quantity, ing.unit)}
                     </span>
                   </li>

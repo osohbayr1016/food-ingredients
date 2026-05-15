@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { MealOccasionPills } from "@/components/home/MealOccasionPills";
 import { CategoryPills } from "@/components/home/CategoryPills";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { RecipeFilters } from "@/components/recipe/RecipeFilters";
@@ -32,13 +33,14 @@ export default async function HomePage(props: {
   ]);
 
   return (
-    <main className="space-y-5 py-5">
+    <main className="space-y-8 py-6 pb-10">
       <HomeHeader />
+      <MealOccasionPills />
       <CategoryPills cuisines={cuisinesRes.cuisines ?? []} />
-      <section className="space-y-3">
+      <section className="space-y-5">
         <div className="flex items-end justify-between gap-2">
-          <h2 className="text-lg font-bold text-zinc-900">Most popular</h2>
-          <Link href="/discover" className="text-xs font-semibold text-(--figma-primary) touch-manipulation">
+          <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900">Most popular</h2>
+          <Link href="/discover" className="mb-1 text-sm font-semibold text-(--figma-primary) touch-manipulation">
             See all
           </Link>
         </div>
@@ -48,11 +50,11 @@ export default async function HomePage(props: {
           <RecipeGrid recipes={payload.recipes} />
         )}
       </section>
-      <details className="rounded-2xl border border-zinc-100 bg-zinc-50/80 px-3 py-2">
-        <summary className="cursor-pointer text-sm font-semibold text-zinc-800">
+      <details className="rounded-3xl border border-zinc-100 bg-zinc-50 px-5 py-4 shadow-sm transition-all open:bg-white open:shadow-md">
+        <summary className="cursor-pointer text-base font-bold text-zinc-800">
           Filters
         </summary>
-        <div className="pt-3">
+        <div className="pt-4">
           <Suspense
             fallback={<p className="text-sm text-zinc-500">Loading filters…</p>}
           >

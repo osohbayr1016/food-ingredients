@@ -1,9 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { HeroImageCarousel } from "@/components/recipe/HeroImageCarousel";
 import { RecipeLikeButton } from "@/components/recipe/RecipeLikeButton";
 import { RecipeSaveHeart } from "@/components/recipe/RecipeSaveHeart";
 import { cuisineEmoji } from "@/lib/cuisineEmoji";
+import { recipeHeroSlideUrls } from "@/lib/recipeGallery";
 import type { RecipeDetail } from "@/lib/types";
 
 function ShareRow({ title }: { title: string }) {
@@ -44,29 +47,34 @@ function ShareRow({ title }: { title: string }) {
   );
 }
 
-export function RecipeDetailHero({
-  data,
-  hero,
-}: {
-  data: RecipeDetail;
-  hero: string | null | undefined;
-}) {
+export function RecipeDetailHero({ data }: { data: RecipeDetail }) {
   const router = useRouter();
+  const slides = useMemo(
+    () => recipeHeroSlideUrls(data.recipe.image_r2_key, data.recipe.gallery_r2_keys),
+    [data.recipe.image_r2_key, data.recipe.gallery_r2_keys],
+  );
+
+  const [heroIdx, setHeroIdx] = useState(0);
 
   return (
-    <section className="relative -mx-4 aspect-5/6 overflow-hidden rounded-b-[28px] bg-zinc-200 sm:mx-0 sm:rounded-3xl">
-      {hero ? (
-        <img
-          src={hero}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      ) : (
-        <div className="absolute inset-0 grid place-items-center text-6xl opacity-40">
-          {cuisineEmoji(data.recipe.cuisine)}
-        </div>
-      )}
-      <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/75 via-black/20 to-black/40" />
+    <section
+      className="relative -mx-4 aspect-5/6 sm:mx-0"
+      aria-roledescription="carousel"
+    >
+      <div className="absolute inset-0 overflow-hidden rounded-b-[28px] bg-zinc-200 sm:rounded-3xl">
+        {slides.length > 0 ? (
+          <HeroImageCarousel
+            key={slides.join("|")}
+            slides={slides}
+            onIndexChange={setHeroIdx}
+          />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center text-6xl opacity-40">
+            {cuisineEmoji(data.recipe.cuisine)}
+          </div>
+        )}
+      </div>
+      <div className="pointer-events-none absolute inset-0 rounded-b-[28px] bg-linear-to-t from-black/75 via-black/20 to-black/40 sm:rounded-3xl" />
       <div
         className="absolute left-3 top-[calc(env(safe-area-inset-top)+8px)] z-10 flex w-[calc(100%-24px)] items-center justify-between gap-2"
         style={{ pointerEvents: "auto" }}
@@ -93,11 +101,23 @@ export function RecipeDetailHero({
           <RecipeSaveHeart recipeId={data.recipe.id} variant="hero" />
         </div>
       </div>
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-        <span className="h-1.5 w-6 rounded-full bg-white" aria-hidden />
-        <span className="h-1.5 w-1.5 rounded-full bg-white/50" aria-hidden />
-        <span className="h-1.5 w-1.5 rounded-full bg-white/40" aria-hidden />
-      </div>
+      {slides.length > 0 && (
+        <div
+          className="pointer-events-none absolute bottom-4 left-0 right-0 flex justify-center gap-2"
+          aria-hidden
+        >
+          {slides.map((_, i) => (
+            <span
+              key={i}
+              className={
+                i === heroIdx
+                  ? "h-1.5 w-6 rounded-full bg-white transition-all duration-300"
+                  : "h-1.5 w-1.5 rounded-full bg-white/45 transition-all duration-300"
+              }
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

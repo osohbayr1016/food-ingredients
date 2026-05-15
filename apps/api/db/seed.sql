@@ -1,5 +1,6 @@
 PRAGMA foreign_keys = ON;
 
+DELETE FROM recipe_likes;
 DELETE FROM cook_history;
 DELETE FROM saved_recipes;
 DELETE FROM recipe_tags;
@@ -10,6 +11,7 @@ DELETE FROM ingredient_aliases;
 DELETE FROM ingredient_canonicals;
 DELETE FROM tags;
 DELETE FROM ingredient_categories;
+DELETE FROM users;
 
 INSERT INTO ingredient_categories (id, name) VALUES
 ('cat-meat','Мах'),
@@ -20,7 +22,12 @@ INSERT INTO ingredient_categories (id, name) VALUES
 
 INSERT INTO tags (id, name) VALUES
 ('tg-quick','Quick'),
-('tg-protein','High protein');
+('tg-protein','High protein'),
+('tg-party-mn','Найр, үдэшлэг'),
+('tg-national-mn','Үндэсний баяр'),
+('tg-naadam','Наадам'),
+('tg-tsagaan-sar','Цагаан сар'),
+('tg-feed-a-crowd','Олон хүнд (тоо тодорхойгүй)');
 
 INSERT INTO ingredient_canonicals (id, name) VALUES
 ('cn-ku-chicken','тахиа'),
@@ -93,3 +100,10 @@ INSERT INTO steps (id, recipe_id, step_order, description, description_template,
 ('sku-08','rec-korean-chicken-udon',8,'Өндөг нэмэх: Голд нь зай гаргаж өндөг хугалж хийнэ. Тэр өндгийг хутгаж нооделстой холиулна.',NULL,NULL,NULL),
 ('sku-09','rec-korean-chicken-udon',9,'Sweet Corn нэмэх: Галыг унтрааж Sweet Corn нэмэх. Хольж тавган руу шилжүүлнэ.',NULL,NULL,NULL),
 ('sku-10','rec-korean-chicken-udon',10,'Кимчитэй хамт хүргэх: Тавган дээр хийж, хажууд 0.5 аяга Кимчи (хажуугийн) тавина. Халуун байхад идэнэ! 🍜',NULL,NULL,NULL);
+
+INSERT INTO users (id, username, password_hash, role) VALUES (
+  '00000000-0000-4000-8000-000000000001',
+  'admin',
+  '100000$7318d2aa3de1db72c415b354fa64f5c5$5ef3faa9a70fe7950642d217f7ead912169e0acaaa3410394a14da15ef846045',
+  'admin'
+);

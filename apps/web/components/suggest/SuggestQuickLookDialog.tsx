@@ -24,7 +24,8 @@ export function SuggestQuickLookDialog({
   if (!open) return null;
 
   const missing = lines.filter((l) => !l.matched);
-  const have = lines.filter((l) => l.matched);
+  const qtyWarn = lines.filter((l) => l.matched && l.quantity_issue);
+  const have = lines.filter((l) => l.matched && !l.quantity_issue);
 
   return (
     <div
@@ -69,7 +70,12 @@ export function SuggestQuickLookDialog({
             Алхмууд энд багтсангүй — зөвхөн орц, тоо хэмжээ
           </p>
 
-          <QuickLookIngredientBlocks missing={missing} have={have} all={lines} />
+          <QuickLookIngredientBlocks
+            missing={missing}
+            qtyWarn={qtyWarn}
+            have={have}
+            all={lines}
+          />
 
           <Link
             href={recipeHref}

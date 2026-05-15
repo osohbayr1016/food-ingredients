@@ -1,40 +1,34 @@
 "use client";
 
 import { SuggestFeatureIntro } from "@/components/suggest/SuggestFeatureIntro";
+import { SuggestPantryScanPanel } from "@/components/suggest/SuggestPantryScanPanel";
+import { SuggestPantryPicker } from "@/components/suggest/SuggestPantryPicker";
+import { SuggestPantryRow } from "@/components/suggest/SuggestPantryRow";
+import { SuggestResultControls } from "@/components/suggest/SuggestResultControls";
 import { SuggestResults } from "@/components/suggest/SuggestResults";
+import type { SuggestSortKey } from "@/components/suggest/suggestTypes";
 import { useSuggestPantryUrl } from "@/components/suggest/useSuggestPantryUrl";
+import { useMemo, useState } from "react";
 
-function Chip({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full border-2 px-3 py-1.5 text-xs font-medium touch-manipulation ${
-        active
-          ? "border-(--figma-primary) bg-(--figma-primary) text-white"
-          : "border-zinc-200 bg-white text-zinc-700"
-      }`}
-    >
-      {label}
-    </button>
+export function SuggestExplorer() {
+  const {
+    pantry,
+    filters,
+    busy,
+    rows,
+    addPick,
+    addMultiplePicks,
+    addPicksAndSuggest,
+    removePick,
+    updatePick,
+    setFilterPatch,
+    suggest,
+  } = useSuggestPantryUrl();
+  const [sortKey, setSortKey] = useState<SuggestSortKey>("match");
+  const existingIds = useMemo(
+    () => new Set(pantry.map((p) => p.canonical_id)),
+    [pantry],
   );
-}
-
-export function SuggestExplorer({
-  canonicals,
-}: {
-  canonicals: { canonical_id: string; name: string }[];
-}) {
-  const { active, busy, rows, toggle, suggest } =
-    useSuggestPantryUrl(canonicals);
 
   return (
     <div className="space-y-4 py-5">
@@ -44,29 +38,52 @@ export function SuggestExplorer({
         </p>
         <h1 className="text-2xl font-bold text-zinc-900">Тохирох жор олох</h1>
         <p className="text-sm text-zinc-500">
-          Гар дээр байгаа орцоо сонгоод, таны ногоонд тохирох боломжит хоолыг харна.
+          Орцоо бичээд сонго, хэмжээгээ оруулаад шүүлтээ тохируулна. Жорыг бодит
+          орцоороор үнэлнэ.
         </p>
       </header>
       <SuggestFeatureIntro />
-      <div className="flex flex-wrap gap-2">
-        {canonicals.map((c) => (
-          <Chip
-            key={c.canonical_id}
-            active={active.has(c.canonical_id)}
-            label={c.name}
-            onClick={() => toggle(c.canonical_id)}
-          />
-        ))}
-      </div>
+      <SuggestPantryScanPanel
+        onAddPicks={addMultiplePicks}
+        onAddPicksAndSuggest={addPicksAndSuggest}
+        suggestBusy={busy}
+        existingIds={existingIds}
+      />
+      <SuggestPantryPicker onPick={addPick} existingIds={existingIds} />
+      {pantry.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-zinc-600">Сонгосон орц</p>
+          <ul className="space-y-2">
+            {pantry.map((row) => (
+              <li key={row.canonical_id}>
+                <SuggestPantryRow
+                  row={row}
+                  onRemove={() => removePick(row.canonical_id)}
+                  onQuantity={(v) =>
+                    updatePick(row.canonical_id, { quantity: v })
+                  }
+                  onUnit={(v) => updatePick(row.canonical_id, { unit: v })}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <SuggestResultControls
+        filters={filters}
+        setFilterPatch={setFilterPatch}
+        sortKey={sortKey}
+        onSortKey={setSortKey}
+      />
       <button
         type="button"
-        disabled={busy || !active.size}
+        disabled={busy || !pantry.length}
         onClick={() => suggest()}
         className="w-full rounded-2xl bg-(--figma-primary) py-3 font-semibold text-white disabled:opacity-40 touch-manipulation"
       >
         {busy ? "Тооцоолж байна…" : "Жор санал болгох"}
       </button>
-      <SuggestResults rows={rows} />
+      <SuggestResults rows={rows} sortKey={sortKey} />
     </div>
   );
 }

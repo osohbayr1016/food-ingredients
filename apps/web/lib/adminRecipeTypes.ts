@@ -10,6 +10,8 @@ export type RecipeRow = {
   tips?: string | null;
   serves: number;
   is_published?: number | boolean;
+  import_source?: string | null;
+  import_external_id?: string | null;
 };
 
 export type IngRow = {

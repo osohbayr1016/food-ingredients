@@ -5,6 +5,7 @@ export type IngredientPreviewLine = {
   category_name: string;
   note: string | null;
   matched: boolean;
+  quantity_issue?: boolean;
 };
 
 export type SuggestResultRow = {
@@ -21,4 +22,7 @@ export type SuggestResultRow = {
   matched_count: number;
   total_ingredients: number;
   ingredients_preview: IngredientPreviewLine[];
+  pantry_shortfall?: boolean;
 };
+
+export type SuggestSortKey = "match" | "time" | "difficulty" | "serves";

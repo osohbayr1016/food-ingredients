@@ -22,7 +22,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
   const src = recipeImageUrl(recipe.image_r2_key);
 
   return (
-    <article className="relative aspect-3/4 overflow-hidden rounded-3xl bg-zinc-100 shadow-sm">
+    <article className="relative aspect-3/4 overflow-hidden rounded-3xl bg-zinc-100 shadow-md">
       <Link
         href={`/recipe/${recipe.id}`}
         className="absolute inset-0 z-0 block touch-manipulation active:brightness-95"
@@ -43,18 +43,18 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
         <div className="absolute inset-x-0 bottom-0 p-3 pt-8">
           <h2
             id={`recipe-title-${recipe.id}`}
-            className="line-clamp-2 text-sm font-bold leading-snug text-white"
+            className="line-clamp-2 text-base font-bold leading-snug text-white"
           >
             {recipe.title}
           </h2>
           <div className="mt-2 flex items-center gap-2">
             <span
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/90 text-xs font-semibold text-zinc-700"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/95 text-sm font-bold text-zinc-800 shadow-sm"
               aria-hidden
             >
               {recipe.cuisine.slice(0, 1).toUpperCase()}
             </span>
-            <span className="truncate text-xs text-white/95">{recipe.cuisine}</span>
+            <span className="truncate text-sm font-medium text-white/95">{recipe.cuisine}</span>
           </div>
         </div>
       </Link>

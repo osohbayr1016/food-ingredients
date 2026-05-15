@@ -2,6 +2,7 @@ export type Env = {
   DB: D1Database;
   BUCKET: R2Bucket;
   ADMIN_SECRET: string;
+  JWT_SECRET: string;
   PUBLIC_ORIGINS: string;
   R2_PUBLIC_BASE_URL: string;
   R2_BUCKET_NAME: string;

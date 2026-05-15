@@ -1,49 +1,21 @@
 "use client";
 
-import {
-  clearProfile,
-  dispatchLibrary,
-  readLikedIds,
-  readProfile,
-  type FoodProfile,
-} from "@/lib/profileStorage";
-import { ProfileGuestGate } from "@/components/profile/ProfileGuestGate";
+import { useAuth } from "@/components/auth/AuthContext";
+import { ProfileGuestSection } from "@/components/profile/ProfileGuestSection";
 import { ProfileLibrarySection } from "@/components/profile/ProfileLibrarySection";
 import { clientFetch } from "@/lib/clientApi";
-import type { RecipeDetail, RecipeListItem } from "@/lib/types";
+import type { RecipeListItem } from "@/lib/types";
 import { useCallback, useEffect, useState } from "react";
 
-type Tab = "saved" | "liked";
-
-async function fetchAsListItem(id: string): Promise<RecipeListItem | null> {
-  try {
-    const res = await clientFetch(`/recipes/${id}`);
-    if (!res.ok) return null;
-    const d = (await res.json()) as RecipeDetail;
-    return d.recipe;
-  } catch {
-    return null;
-  }
-}
-
 export default function ProfilePageClient() {
-  const [profile, setProfile] = useState<FoodProfile | null>(null);
-  const [tab, setTab] = useState<Tab>("saved");
+  const { user, ready, logout } = useAuth();
+  const [tab, setTab] = useState<"saved" | "liked" | "nutrition">("saved");
   const [saved, setSaved] = useState<RecipeListItem[]>([]);
   const [liked, setLiked] = useState<RecipeListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const syncShell = useCallback(() => setProfile(readProfile()), []);
-
-  useEffect(() => {
-    syncShell();
-    window.addEventListener("food-library-changed", syncShell);
-    return () => window.removeEventListener("food-library-changed", syncShell);
-  }, [syncShell]);
-
   const reloadRecipes = useCallback(async () => {
-    const p = readProfile();
-    if (!p) {
+    if (!user) {
       setSaved([]);
       setLiked([]);
       setLoading(false);
@@ -51,38 +23,48 @@ export default function ProfilePageClient() {
     }
     setLoading(true);
     try {
-      const sa = await clientFetch("/saved");
+      const [sa, li] = await Promise.all([
+        clientFetch("/saved"),
+        clientFetch("/likes"),
+      ]);
       const sj = (await sa.json()) as { saved: RecipeListItem[] };
+      const lj = (await li.json()) as { liked: RecipeListItem[] };
       setSaved(Array.isArray(sj.saved) ? sj.saved : []);
-      const ids = readLikedIds();
-      const rows = await Promise.all(ids.map(fetchAsListItem));
-      setLiked(rows.filter(Boolean) as RecipeListItem[]);
+      setLiked(Array.isArray(lj.liked) ? lj.liked : []);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     reloadRecipes();
-    window.addEventListener("food-library-changed", reloadRecipes);
-    return () => window.removeEventListener("food-library-changed", reloadRecipes);
-  }, [reloadRecipes, profile]);
+  }, [reloadRecipes]);
 
-  if (!profile) return <ProfileGuestGate />;
+  useEffect(() => {
+    function onLib() {
+      void reloadRecipes();
+    }
+    window.addEventListener("food-library-changed", onLib);
+    return () => window.removeEventListener("food-library-changed", onLib);
+  }, [reloadRecipes]);
+
+  if (!ready) {
+    return (
+      <p className="py-14 text-center text-sm text-zinc-500">Ачааллаж байна…</p>
+    );
+  }
+
+  if (!user) return <ProfileGuestSection />;
 
   return (
     <ProfileLibrarySection
-      profile={profile}
+      user={user}
       tab={tab}
       setTab={setTab}
       loading={loading}
       saved={saved}
       liked={liked}
-      onSignOut={() => {
-        clearProfile();
-        dispatchLibrary();
-        setProfile(null);
-      }}
+      onSignOut={logout}
     />
   );
 }

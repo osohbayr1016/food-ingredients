@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/components/auth/AuthContext";
 import { RecipeGrid } from "@/components/recipe/RecipeGrid";
 import { clientFetch } from "@/lib/clientApi";
 import type { RecipeListItem } from "@/lib/types";
@@ -18,6 +19,7 @@ type Hist = {
 };
 
 export function SavedHub() {
+  const { user, ready } = useAuth();
   const [tab, setTab] = useState<"saved" | "history">("saved");
   const [saved, setSaved] = useState<Array<RecipeListItem & { saved_at?: string }>>([]);
   const [hist, setHist] = useState<Hist[]>([]);
@@ -26,6 +28,11 @@ export function SavedHub() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      if (!user) {
+        setSaved([]);
+        setHist([]);
+        return;
+      }
       try {
         const [sa, hi] = await Promise.all([clientFetch("/saved"), clientFetch("/history")]);
         const savedJson = (await sa.json()) as {
@@ -39,13 +46,13 @@ export function SavedHub() {
           setHist(histJson.history ?? []);
         }
       } catch {
-        if (!cancelled) setErr("Could not load saved recipes.");
+        if (!cancelled) setErr("Жор ачаалахад алдаа гарлаа.");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
   const tabs = (
     <div className="mb-4 flex gap-2 rounded-full border border-zinc-200 bg-zinc-50 p-1">
@@ -58,11 +65,39 @@ export function SavedHub() {
           }`}
           onClick={() => setTab(key)}
         >
-          {key === "saved" ? "Bookmarks" : "History"}
+          {key === "saved" ? "Хадгалсан" : "Түүх"}
         </button>
       ))}
     </div>
   );
+
+  if (!ready) {
+    return (
+      <main className="py-10 text-center text-sm text-zinc-500">Ачааллаж байна…</main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="space-y-4 py-10 text-center">
+        <h1 className="text-xl font-bold text-zinc-900">Хадгалсан жор</h1>
+        <p className="text-sm text-zinc-600">
+          Энд жагсаахын тулд нэвтэрнэ үү.
+        </p>
+        <Link
+          href="/login?next=/saved"
+          className="inline-block rounded-full bg-(--figma-primary) px-6 py-3 text-sm font-semibold text-white touch-manipulation"
+        >
+          Нэвтрэх
+        </Link>
+        <div>
+          <Link href="/signup" className="text-sm text-(--figma-primary) touch-manipulation">
+            Бүртгүүлэх
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="space-y-4 py-5">
@@ -71,11 +106,8 @@ export function SavedHub() {
           <p className="text-xs font-semibold uppercase tracking-wide text-(--figma-primary)">
             Library
           </p>
-          <h1 className="text-2xl font-bold text-zinc-900">My bookmarks</h1>
-          <p className="mt-1 text-sm text-zinc-500">Stored on this device — no login required.</p>
-          <Link href="/login" className="mt-2 inline-block text-xs font-semibold text-(--figma-primary) touch-manipulation">
-            About accounts &amp; future sync →
-          </Link>
+          <h1 className="text-2xl font-bold text-zinc-900">Миний ном</h1>
+          <p className="mt-1 text-sm text-zinc-500">Таны бүртгэлтэй холбогдсон.</p>
         </div>
         <Link
           href="/search"
@@ -94,7 +126,7 @@ export function SavedHub() {
         saved.length ? (
           <RecipeGrid recipes={saved} />
         ) : (
-          <p className="text-sm text-zinc-500">No saved recipes yet.</p>
+          <p className="text-sm text-zinc-500">Одоогоор хадгалсан зүйл алга.</p>
         )
       ) : (
         <HistoryList rows={hist} />
@@ -104,7 +136,7 @@ export function SavedHub() {
 }
 
 function HistoryList({ rows }: { rows: Hist[] }) {
-  if (!rows.length) return <p className="text-sm text-zinc-500">No cook history.</p>;
+  if (!rows.length) return <p className="text-sm text-zinc-500">Түүх хоосон.</p>;
   return (
     <div className="space-y-3">
       {rows.map((h) => (
@@ -122,7 +154,7 @@ function HistoryList({ rows }: { rows: Hist[] }) {
             <p className="text-sm text-zinc-600">{h.personal_note}</p>
           )}
           <Link href={`/recipe/${h.recipe_id}/cook`} className="text-xs font-semibold text-(--figma-primary) touch-manipulation">
-            Cook again →
+            Дахин гаргах →
           </Link>
         </div>
       ))}

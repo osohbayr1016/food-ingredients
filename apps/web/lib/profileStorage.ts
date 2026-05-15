@@ -77,6 +77,17 @@ export function isLikedId(recipeId: string) {
   return readLikedIds().includes(recipeId);
 }
 
+/** Remove ids (e.g. unpublished/deleted recipes) from the guest liked list. */
+export function removeLikedIdsFromStorage(ids: string[]) {
+  if (!ids.length || typeof window === "undefined") return;
+  const drop = new Set(ids);
+  const cur = readLikedIds();
+  const next = cur.filter((id) => !drop.has(id));
+  if (next.length === cur.length) return;
+  localStorage.setItem(LIKED_KEY, JSON.stringify(next));
+  dispatchLibrary();
+}
+
 export function dispatchLibrary() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event("food-library-changed"));

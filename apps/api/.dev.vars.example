@@ -12,8 +12,13 @@
 #   pnpm secret:r2:access
 #   pnpm secret:r2:secret
 # Also set R2_PUBLIC_BASE_URL in wrangler.toml [vars] (or secret if you prefer) to your real public URL.
+#
+# Plaintext API admin: Authorization Bearer must match this (same default as wrangler.toml [vars] locally).
+ADMIN_SECRET=admin
 
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_PUBLIC_BASE_URL=https://pub-10e5fb7fa4594b528d76dcc4cc0272a4.r2.dev
+# Optional: override JWT secret for local API (defaults match wrangler.toml [vars] JWT_SECRET).
+# JWT_SECRET=

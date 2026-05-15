@@ -9,16 +9,22 @@ export function ProfileGuestGate() {
         ?
       </div>
       <div className="max-w-xs space-y-2">
-        <h1 className="text-xl font-bold text-zinc-900">Profile</h1>
+        <h1 className="text-xl font-bold text-zinc-900">Профайл</h1>
         <p className="text-sm text-zinc-600">
-          You need to sign in with a profile to save recipes and see them here alongside recipes you liked.
+          Жор үзэхэд нэвтрэх шаардлагагүй. Хадгалах, дуртай, тогооны түүхийн тулд нэвтэрнэ үү.
         </p>
       </div>
       <Link
         href="/login"
         className="w-full max-w-[280px] rounded-full bg-(--figma-primary) py-3.5 text-sm font-semibold text-white touch-manipulation"
       >
-        Continue to save recipes
+        Нэвтрэх
+      </Link>
+      <Link
+        href="/signup"
+        className="text-sm font-semibold text-(--figma-primary) touch-manipulation"
+      >
+        Шинээр бүртгүүлэх
       </Link>
     </main>
   );

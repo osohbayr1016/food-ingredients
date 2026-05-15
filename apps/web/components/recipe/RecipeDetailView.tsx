@@ -11,7 +11,6 @@ import { StepPreviewCard } from "@/components/recipe/StepPreviewCard";
 import { cuisineEmoji } from "@/lib/cuisineEmoji";
 import { interpolateStep } from "@/lib/interpolateStep";
 import { buildSubstitutionMap, type ScaleCtx } from "@/lib/ingredientScale";
-import { recipeImageUrl } from "@/lib/imageUrl";
 import type { RecipeDetail } from "@/lib/types";
 import { useMemo, useState } from "react";
 
@@ -27,11 +26,9 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
     [data.ingredients, ctx],
   );
 
-  const hero = recipeImageUrl(data.recipe.image_r2_key);
-
   return (
     <main className="space-y-6 pb-32">
-      <RecipeDetailHero data={data} hero={hero} />
+      <RecipeDetailHero data={data} />
 
       <header>
         <h1 className="text-2xl font-bold leading-tight text-zinc-900">
@@ -103,19 +100,30 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
         <IngredientGroupedList items={data.ingredients} ctx={ctx} />
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-bold text-zinc-900">Instructions</h2>
-        <div className="space-y-3">
-          {data.steps.map((st) => {
-            const tpl = st.description_template?.trim();
-            const body = tpl
-              ? interpolateStep(tpl, substitutions)
-              : st.description;
-            return (
-              <StepPreviewCard key={st.id} order={st.step_order} text={body} />
-            );
-          })}
+      <section className="space-y-3" id="making-guide">
+        <div>
+          <h2 className="text-lg font-bold text-zinc-900">Хийх заавар</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Making guide — алхмаар нь дагана уу. Доорх товчоор бүтэн тогооны горимд орно.
+          </p>
         </div>
+        {data.steps.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-600">
+            Энэ жорын алхам ороогүй байна. Админ хэсгээс засварлаж нэмнэ үү.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {data.steps.map((st) => {
+              const tpl = st.description_template?.trim();
+              const body = tpl
+                ? interpolateStep(tpl, substitutions)
+                : st.description;
+              return (
+                <StepPreviewCard key={st.id} order={st.step_order} text={body} />
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <Link
@@ -127,7 +135,7 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
           backgroundColor: "var(--figma-primary)",
         }}
       >
-        Start cooking
+        Тогоонд эхлэх
       </Link>
     </main>
   );

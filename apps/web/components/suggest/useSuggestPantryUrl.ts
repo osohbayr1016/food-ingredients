@@ -1,36 +1,32 @@
 "use client";
 
+import { useSuggestPantryBatch } from "@/components/suggest/useSuggestPantryBatch";
 import type { SuggestResultRow } from "@/components/suggest/suggestTypes";
-import { clientFetch } from "@/lib/clientApi";
+import { postSuggestPantryResults } from "@/lib/postSuggestPantry";
+import { suggestStateSig } from "@/lib/suggestPayload";
 import {
-  buildSuggestSearch,
-  shouldRestoreResults,
-  validPicksFromUrl,
+  applySuggestFilterPatch,
+  buildSuggestQueryString,
+  filtersFromUrl,
+  type PantryPick,
+  picksFromUrl,
+  type SuggestUrlFilters,
 } from "@/lib/suggestQuery";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useSuggestResultsRestore } from "@/components/suggest/useSuggestResultsRestore";
 
-function picksSignature(picks: Set<string>) {
-  return [...picks].sort().join("\u0000");
-}
-
-export function useSuggestPantryUrl(
-  canonicals: { canonical_id: string; name: string }[],
-) {
+export function useSuggestPantryUrl() {
   const pathname = usePathname() ?? "/suggest";
   const router = useRouter();
   const searchParams = useSearchParams();
-  const lookup = useMemo(
-    () => new Map(canonicals.map((c) => [c.canonical_id, c.name])),
-    [canonicals],
+  const pantry = useMemo(
+    () => picksFromUrl(searchParams),
+    [searchParams],
   );
-  const validIds = useMemo(
-    () => new Set(canonicals.map((c) => c.canonical_id)),
-    [canonicals],
-  );
-  const active = useMemo(
-    () => validPicksFromUrl(searchParams, validIds),
-    [searchParams, validIds],
+  const filters = useMemo(
+    () => filtersFromUrl(searchParams),
+    [searchParams],
   );
 
   const [busy, setBusy] = useState(false);
@@ -38,86 +34,115 @@ export function useSuggestPantryUrl(
   const resultsSigRef = useRef<string | null>(null);
 
   const replaceQuery = useCallback(
-    (next: Set<string>, includeResults: boolean) => {
-      router.replace(`${pathname}${buildSuggestSearch(next, includeResults)}`, {
-        scroll: false,
-      });
+    (
+      nextPantry: PantryPick[],
+      nextFilters: SuggestUrlFilters,
+      includeResults: boolean,
+    ) => {
+      router.replace(
+        `${pathname}${buildSuggestQueryString(nextPantry, includeResults, nextFilters)}`,
+        { scroll: false },
+      );
     },
     [pathname, router],
   );
 
-  const toggle = useCallback(
-    (id: string) => {
-      const next = new Set(active);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  const addPick = useCallback(
+    (row: { canonical_id: string; name: string }) => {
+      if (pantry.some((p) => p.canonical_id === row.canonical_id)) return;
+      const next: PantryPick[] = [
+        ...pantry,
+        {
+          canonical_id: row.canonical_id,
+          name: row.name,
+          quantity: "",
+          unit: "",
+        },
+      ];
       setRows([]);
       resultsSigRef.current = null;
-      replaceQuery(next, false);
+      replaceQuery(next, filters, false);
     },
-    [active, replaceQuery],
+    [pantry, filters, replaceQuery],
+  );
+
+  const removePick = useCallback(
+    (canonicalId: string) => {
+      const next = pantry.filter((p) => p.canonical_id !== canonicalId);
+      setRows([]);
+      resultsSigRef.current = null;
+      replaceQuery(next, filters, false);
+    },
+    [pantry, filters, replaceQuery],
+  );
+
+  const updatePick = useCallback(
+    (
+      canonicalId: string,
+      patch: Partial<Pick<PantryPick, "quantity" | "unit" | "name">>,
+    ) => {
+      const next = pantry.map((p) =>
+        p.canonical_id === canonicalId ? { ...p, ...patch } : p,
+      );
+      setRows([]);
+      resultsSigRef.current = null;
+      replaceQuery(next, filters, false);
+    },
+    [pantry, filters, replaceQuery],
+  );
+
+  const setFilterPatch = useCallback(
+    (patch: Partial<SuggestUrlFilters>) => {
+      const next = applySuggestFilterPatch(filters, patch);
+      setRows([]);
+      resultsSigRef.current = null;
+      replaceQuery(pantry, next, false);
+    },
+    [pantry, filters, replaceQuery],
+  );
+
+  const { addMultiplePicks, addPicksAndSuggest } = useSuggestPantryBatch(
+    pantry,
+    filters,
+    replaceQuery,
+    setRows,
+    resultsSigRef,
+    setBusy,
   );
 
   async function suggest() {
-    if (!active.size) return;
+    if (!pantry.length) return;
     setBusy(true);
     try {
-      const names = Array.from(active)
-        .map((id) => lookup.get(id) || id)
-        .filter(Boolean);
-      const res = await clientFetch("/suggest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ingredient_names: names }),
-      });
-      const data = (await res.json()) as { results: SuggestResultRow[] };
-      const list = data.results ?? [];
+      const list = await postSuggestPantryResults(pantry, filters);
       setRows(list);
-      resultsSigRef.current = picksSignature(active);
-      replaceQuery(active, true);
+      resultsSigRef.current = suggestStateSig(pantry, filters);
+      replaceQuery(pantry, filters, true);
     } finally {
       setBusy(false);
     }
   }
 
-  useEffect(() => {
-    if (!shouldRestoreResults(searchParams)) return;
-    const picks = validPicksFromUrl(searchParams, validIds);
-    if (picks.size === 0) return;
-    const sig = picksSignature(picks);
-    if (resultsSigRef.current === sig) return;
+  useSuggestResultsRestore(
+    searchParams,
+    pantry,
+    filters,
+    resultsSigRef,
+    setRows,
+    setBusy,
+  );
 
-    const ac = new AbortController();
-    (async () => {
-      setBusy(true);
-      try {
-        const names = Array.from(picks)
-          .map((id) => lookup.get(id) || id)
-          .filter(Boolean);
-        const res = await clientFetch("/suggest", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ingredient_names: names }),
-          signal: ac.signal,
-        });
-        if (ac.signal.aborted) return;
-        const data = (await res.json()) as { results: SuggestResultRow[] };
-        setRows(data.results ?? []);
-        resultsSigRef.current = sig;
-      } catch (e: unknown) {
-        if (
-          ac.signal.aborted ||
-          (e instanceof DOMException && e.name === "AbortError")
-        ) {
-          return;
-        }
-        throw e;
-      } finally {
-        if (!ac.signal.aborted) setBusy(false);
-      }
-    })();
-    return () => ac.abort();
-  }, [lookup, searchParams, validIds]);
-
-  return { active, busy, rows, toggle, suggest };
+  return {
+    pantry,
+    filters,
+    busy,
+    rows,
+    addPick,
+    addMultiplePicks,
+    addPicksAndSuggest,
+    removePick,
+    updatePick,
+    setFilterPatch,
+    suggest,
+  };
 }

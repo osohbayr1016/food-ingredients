@@ -30,7 +30,9 @@ CREATE TABLE IF NOT EXISTS recipes (
   tips TEXT,
   serves INTEGER NOT NULL DEFAULT 4,
   is_published INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  import_source TEXT,
+  import_external_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS ingredients (
@@ -66,18 +68,33 @@ CREATE TABLE IF NOT EXISTS recipe_tags (
   PRIMARY KEY (recipe_id, tag_id)
 );
 
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('user', 'admin')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS recipe_likes (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+  liked_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, recipe_id)
+);
+
 CREATE TABLE IF NOT EXISTS saved_recipes (
   id TEXT PRIMARY KEY,
-  device_id TEXT NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
   saved_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS ix_saved_unique ON saved_recipes(device_id, recipe_id);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_saved_unique ON saved_recipes(user_id, recipe_id);
 
 CREATE TABLE IF NOT EXISTS cook_history (
   id TEXT PRIMARY KEY,
-  device_id TEXT NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
   cooked_at TEXT NOT NULL DEFAULT (datetime('now')),
   rating INTEGER,
@@ -87,11 +104,27 @@ CREATE TABLE IF NOT EXISTS cook_history (
   )
 );
 
+CREATE INDEX IF NOT EXISTS ix_likes_user ON recipe_likes(user_id);
+CREATE INDEX IF NOT EXISTS ix_history_user ON cook_history(user_id);
 CREATE INDEX IF NOT EXISTS ix_ingredients_recipe ON ingredients(recipe_id);
 CREATE INDEX IF NOT EXISTS ix_steps_recipe ON steps(recipe_id);
 CREATE INDEX IF NOT EXISTS ix_recipes_cuisine ON recipes(cuisine);
 CREATE INDEX IF NOT EXISTS ix_recipes_published ON recipes(is_published);
-CREATE INDEX IF NOT EXISTS ix_saved_device ON saved_recipes(device_id);
-CREATE INDEX IF NOT EXISTS ix_history_device ON cook_history(device_id);
 CREATE INDEX IF NOT EXISTS ix_aliases_norm ON ingredient_aliases(normalized);
 CREATE INDEX IF NOT EXISTS ix_recipes_pub_cuisine ON recipes(is_published, cuisine);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_recipes_import_ext ON recipes(import_source, import_external_id);
+
+CREATE TABLE IF NOT EXISTS user_nutrition_profiles (
+  user_id TEXT NOT NULL PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  sex TEXT NOT NULL CHECK (sex IN ('male', 'female')),
+  age_years INTEGER NOT NULL,
+  height_cm REAL NOT NULL,
+  weight_kg REAL NOT NULL,
+  activity_level TEXT NOT NULL CHECK (activity_level IN (
+    'sedentary', 'light', 'moderate', 'active', 'very_active'
+  )),
+  goal TEXT NOT NULL CHECK (goal IN (
+    'maintain', 'cut_mild', 'cut_mod', 'lean_gain', 'gain'
+  )),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

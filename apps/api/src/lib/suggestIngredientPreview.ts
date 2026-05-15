@@ -16,6 +16,7 @@ export type IngredientPreviewOut = {
   category_name: string;
   note: string | null;
   matched: boolean;
+  quantity_issue?: boolean;
 };
 
 export function buildIngredientPreview(

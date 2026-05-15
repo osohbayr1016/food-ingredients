@@ -14,7 +14,9 @@ binding = "BUCKET"
 bucket_name = "food-ingredients-images"
 
 [vars]
-ADMIN_SECRET = "dev-admin-secret-change-me"
+# Local default; production: run `pnpm exec wrangler secret put ADMIN_SECRET` to override this var.
+ADMIN_SECRET = "admin"
+JWT_SECRET = "dev-jwt-secret-change-me-at-least-32-chars!!"
 # Exact browser Origins allowed for API + credentialed admin calls (add your production domain here).
 PUBLIC_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://food-ingredients-web.pages.dev,https://food-ingredients-web.osohoo691016.workers.dev"
 # Must match the bucket’s public R2.dev URL or custom domain (no trailing slash). Same value as web NEXT_PUBLIC_R2_PUBLIC_BASE_URL.

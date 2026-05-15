@@ -1,5 +1,6 @@
 "use client";
 
+import { getAuthToken } from "./authStorage";
 import { apiBase } from "./publicEnv";
 
 export function getDeviceId() {
@@ -16,5 +17,7 @@ export async function clientFetch(path: string, init?: RequestInit) {
   const headers = new Headers(init?.headers);
   const did = getDeviceId();
   if (did) headers.set("X-Device-Id", did);
+  const auth = getAuthToken();
+  if (auth) headers.set("Authorization", `Bearer ${auth}`);
   return fetch(`${apiBase()}${path}`, { ...init, headers });
 }

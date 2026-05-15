@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { RecipeManagementRow } from "@/components/admin/RecipeManagementRow";
@@ -21,7 +22,7 @@ export function RecipeManagementList() {
   const load = useCallback(async () => {
     setErr(null);
     if (!adminSecret.trim()) {
-      setErr("Дээрх талбарт ADMIN нууц оруулна уу.");
+      setErr("Дээрх талбарт админ түлхүүр оруулна уу.");
       setRows(null);
       return;
     }
@@ -72,14 +73,22 @@ export function RecipeManagementList() {
               Жорыг засах, үзэх, устгах. Нийтлэсэн жор вэб дээр харагдана.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void load()}
-            disabled={loading}
-            className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-800 shadow-sm disabled:opacity-50"
-          >
-            {loading ? "Уншиж байна…" : "Сэргээх"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/admin"
+              className="rounded-xl bg-[#E23E3E] px-4 py-2 text-sm font-medium text-white"
+            >
+              Шинэ жор нэмэх
+            </Link>
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+              className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-800 shadow-sm disabled:opacity-50"
+            >
+              {loading ? "Уншиж байна…" : "Сэргээх"}
+            </button>
+          </div>
         </header>
 
         {err ? (
@@ -90,7 +99,7 @@ export function RecipeManagementList() {
 
         {rows && rows.length === 0 ? (
           <p className="rounded-xl border border-dashed border-zinc-200 bg-white py-12 text-center text-sm text-zinc-500">
-            Жор алга. Эхлээд «Импорт» хуудаснаас нэмнэ үү.
+            Жор алга. «Шинэ жор нэмэх» эсвэл «Импорт» хуудаснаас нэмнэ үү.
           </p>
         ) : null}
 

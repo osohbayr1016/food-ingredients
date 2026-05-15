@@ -1,15 +1,32 @@
+"use client";
+
 import { SuggestResultCard } from "@/components/suggest/SuggestResultCard";
-import type { SuggestResultRow } from "@/components/suggest/suggestTypes";
+import type {
+  SuggestResultRow,
+  SuggestSortKey,
+} from "@/components/suggest/suggestTypes";
+import { sortSuggestRows } from "@/lib/suggestSort";
+import { useMemo } from "react";
 
 export type { IngredientPreviewLine, SuggestResultRow } from "@/components/suggest/suggestTypes";
 
-export function SuggestResults({ rows }: { rows: SuggestResultRow[] }) {
-  if (!rows.length) return null;
+export function SuggestResults({
+  rows,
+  sortKey,
+}: {
+  rows: SuggestResultRow[];
+  sortKey?: SuggestSortKey;
+}) {
+  const sorted = useMemo(
+    () => sortSuggestRows(rows, sortKey ?? "match"),
+    [rows, sortKey],
+  );
+  if (!sorted.length) return null;
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-bold text-zinc-900">Хамгийн ойрын тааруулалт</h2>
       <ul className="space-y-3">
-        {rows.map((row) => (
+        {sorted.map((row) => (
           <li key={row.recipe_id}>
             <SuggestResultCard row={normalizeRow(row)} />
           </li>

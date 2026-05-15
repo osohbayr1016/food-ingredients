@@ -14,7 +14,7 @@
     "build": "pnpm --filter web run pages:build",
     "build:api": "pnpm --filter api run build",
     "lint": "pnpm -r run lint",
-    "deploy": "pnpm --filter web run cf:deploy",
+    "deploy:web": "pnpm --filter web run cf:deploy",
     "deploy:api": "pnpm --filter api run deploy"
   }
 }

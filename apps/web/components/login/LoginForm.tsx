@@ -3,8 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
-import { readProfile, writeProfile } from "@/lib/profileStorage";
+import { useState } from "react";
+import { useAuth } from "@/components/auth/AuthContext";
+
+const errMsg: Record<string, string> = {
+  invalid_credentials: "Нэвтрэх нэр эсвэл нууц үг буруу байна.",
+  credentials_required: "Мэдээллээ оруулна уу.",
+  login_failed: "Нэвтрэхэд алдаа гарлаа.",
+  auth_unavailable:
+    "Нэвтрэлтийн өгөгдлийн сантай холбогдож чадсангүй. Системийн админд хэлнэ үү.",
+  server_misconfigured: "Серверийн нууц тохиргоо дутуу байна.",
+};
 
 export function LoginForm({
   initialNext,
@@ -14,68 +23,87 @@ export function LoginForm({
   reason?: string;
 }) {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [handle, setHandle] = useState("");
+  const { login } = useAuth();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    const p = readProfile();
-    if (p) {
-      setName(p.name);
-      setHandle(p.handle.startsWith("@") ? p.handle : `@${p.handle}`);
-    }
-  }, []);
-
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
-    writeProfile(name, handle);
-    const next =
-      typeof initialNext === "string" && initialNext.startsWith("/")
-        ? initialNext
-        : "/profile";
-    router.replace(next);
-    router.refresh();
+    setErr(null);
+    setBusy(true);
+    try {
+      await login(username, password);
+      const next =
+        typeof initialNext === "string" && initialNext.startsWith("/")
+          ? initialNext
+          : "/profile";
+      router.replace(next);
+      router.refresh();
+    } catch (er) {
+      const code = er instanceof Error ? er.message : "";
+      setErr(errMsg[code] ?? "Алдаа гарлаа. Дахин оролдоно уу.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <form onSubmit={submit} className="mx-auto flex max-w-md flex-col gap-4 py-6">
+      <h2 className="text-center text-lg font-semibold text-zinc-900">Нэвтрэх</h2>
       {reason === "save" ? (
         <p className="text-center text-sm text-zinc-600">
-          Create a profile to <span className="font-semibold text-zinc-900">save recipes</span> to{" "}
-          your library.
+          Хадгалахын тулд <span className="font-semibold text-zinc-900">бүртгэлтэй</span> байх
+          шаардлагатай.
+        </p>
+      ) : reason === "like" ? (
+        <p className="text-center text-sm text-zinc-600">
+          Дуртай гэж тэмдэглэхийн тулд нэвтэрнэ үү.
         </p>
       ) : (
         <p className="text-center text-sm text-zinc-600">
-          Browsing stays free — a profile unlocks saves and your tab on Profile.
+          Жор үзэхэд бүртгэл хэрэггүй. Хадгалах, дуртай, түүх зэрэгт нэвтэрнэ үү.
         </p>
       )}
+      {err ? <p className="text-center text-sm text-red-600">{err}</p> : null}
       <label className="space-y-1 text-sm">
-        <span className="text-zinc-500">Display name</span>
+        <span className="text-zinc-500">Хэрэглэгчийн нэр</span>
         <input
           required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          autoComplete="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 outline-none focus:border-(--figma-primary)"
-          placeholder="Alex Cook"
-          autoComplete="name"
+          placeholder="jordan_cook"
         />
       </label>
       <label className="space-y-1 text-sm">
-        <span className="text-zinc-500">Handle (optional)</span>
+        <span className="text-zinc-500">Нууц үг</span>
         <input
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
+          required
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 outline-none focus:border-(--figma-primary)"
-          placeholder="@alex_cook"
         />
       </label>
       <button
         type="submit"
-        className="rounded-2xl bg-(--figma-primary) py-3 text-sm font-semibold text-white touch-manipulation"
+        disabled={busy}
+        className="rounded-2xl bg-(--figma-primary) py-3 text-sm font-semibold text-white disabled:opacity-50 touch-manipulation"
       >
-        Continue
+        {busy ? "Түр хүлээнэ үү…" : "Нэвтрэх"}
       </button>
+      <p className="text-center text-sm text-zinc-600">
+        Бүртгэл байхгүй юу?{" "}
+        <Link href="/signup" className="font-semibold text-(--figma-primary) touch-manipulation">
+          Бүртгүүлэх
+        </Link>
+      </p>
       <Link href="/" className="py-2 text-center text-sm text-(--figma-primary) touch-manipulation">
-        Back to browsing
+        Нүүр рүү буцах
       </Link>
     </form>
   );

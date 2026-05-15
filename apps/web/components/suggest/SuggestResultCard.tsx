@@ -50,6 +50,11 @@ export function SuggestResultCard({ row }: { row: SuggestResultRow }) {
             <p className="mt-1 text-left text-xs text-emerald-700">
               Орц тааралт {row.matched_count}/{row.total_ingredients}
             </p>
+            {row.pantry_shortfall ? (
+              <p className="mt-1 text-left text-xs font-medium text-amber-800">
+                Зарим орцны хэмжээ тань жорноос бага байж магадгүй
+              </p>
+            ) : null}
           </Link>
           <button
             type="button"

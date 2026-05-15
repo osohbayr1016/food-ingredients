@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/components/auth/AuthContext";
 import {
   createContext,
   useContext,
@@ -10,16 +11,27 @@ import {
 
 type AdminSecretCtx = {
   adminSecret: string;
+  manualSecret: string;
   setAdminSecret: (s: string) => void;
 };
 
 const AdminSecretContext = createContext<AdminSecretCtx | null>(null);
 
 export function AdminSecretProvider({ children }: { children: ReactNode }) {
-  const [adminSecret, setAdminSecret] = useState("");
+  const { user, token } = useAuth();
+  const [manualSecret, setManualSecret] = useState(() =>
+    process.env.NODE_ENV === "development" ? "admin" : "",
+  );
+  const t = token.trim();
+  const adminSecret =
+    user?.role === "admin" && t ? t : manualSecret;
   const value = useMemo(
-    () => ({ adminSecret, setAdminSecret }),
-    [adminSecret],
+    () => ({
+      adminSecret,
+      manualSecret,
+      setAdminSecret: setManualSecret,
+    }),
+    [adminSecret, manualSecret],
   );
   return (
     <AdminSecretContext.Provider value={value}>

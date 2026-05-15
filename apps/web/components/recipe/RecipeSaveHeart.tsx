@@ -1,7 +1,8 @@
 "use client";
 
 import { clientFetch } from "@/lib/clientApi";
-import { dispatchLibrary, readProfile } from "@/lib/profileStorage";
+import { dispatchLibrary } from "@/lib/profileStorage";
+import { useAuth } from "@/components/auth/AuthContext";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -30,29 +31,39 @@ export function RecipeSaveHeart({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user, ready } = useAuth();
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      if (!user) {
+        if (!cancelled) setSaved(false);
+        return;
+      }
       const res = await clientFetch("/saved");
       const payload = (await res.json()) as { saved?: { id: string }[] };
       const list = payload.saved ?? [];
       if (!cancelled) {
-        setSaved(Array.isArray(list) && list.some((r: { id: string }) => r.id === recipeId));
+        setSaved(
+          Array.isArray(list) && list.some((r: { id: string }) => r.id === recipeId),
+        );
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [recipeId]);
+  }, [recipeId, user]);
 
   async function toggle(e?: React.MouseEvent) {
     e?.stopPropagation();
     e?.preventDefault();
-    if (!readProfile()) {
-      const next = pathname ? `?next=${encodeURIComponent(pathname)}&reason=save` : "?reason=save";
+    if (!ready) return;
+    if (!user) {
+      const next = pathname
+        ? `?next=${encodeURIComponent(pathname)}&reason=save`
+        : "?reason=save";
       router.push(`/login${next}`);
       return;
     }

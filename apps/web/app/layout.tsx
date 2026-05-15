@@ -1,7 +1,25 @@
+import { AuthProvider } from "@/components/auth/AuthContext";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { RegisterSw } from "@/components/layout/RegisterSw";
+import Script from "next/script";
 import "./globals.css";
+
+const swDevCleanup = `
+(function () {
+  if (typeof navigator === "undefined" || !navigator.serviceWorker) return;
+  navigator.serviceWorker.getRegistrations().then(function (regs) {
+    if (!regs.length) return;
+    return Promise.all(regs.map(function (r) { return r.unregister(); })).then(function () {
+      location.reload();
+    });
+  });
+})();`;
+
+const swProdRegister = `
+(function () {
+  if (typeof navigator === "undefined" || !navigator.serviceWorker) return;
+  navigator.serviceWorker.register("/sw.js").catch(function () {});
+})();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,8 +55,16 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-zinc-900`}
       >
-        <RegisterSw />
-        {children}
+        {process.env.NODE_ENV === "production" ? (
+          <Script id="sw-register" strategy="afterInteractive">
+            {swProdRegister}
+          </Script>
+        ) : (
+          <Script id="sw-dev-cleanup" strategy="beforeInteractive">
+            {swDevCleanup}
+          </Script>
+        )}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

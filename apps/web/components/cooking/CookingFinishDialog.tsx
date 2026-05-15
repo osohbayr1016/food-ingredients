@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/components/auth/AuthContext";
 import { clientFetch } from "@/lib/clientApi";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13,15 +14,20 @@ export function CookingFinishDialog({
   recipeId: string;
   onClose: () => void;
 }) {
+  const { user, ready } = useAuth();
   const [rating, setRating] = useState(5);
   const [note, setNote] = useState("");
   const [pending, setPending] = useState(false);
   const router = useRouter();
 
   async function save() {
+    if (!user) {
+      router.push(`/login?next=${encodeURIComponent(`/recipe/${recipeId}/cook`)}`);
+      return;
+    }
     try {
       setPending(true);
-      await clientFetch(`/history`, {
+      const res = await clientFetch(`/history`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -30,6 +36,10 @@ export function CookingFinishDialog({
           personal_note: note.trim() || undefined,
         }),
       });
+      if (res.status === 401) {
+        router.push(`/login?next=${encodeURIComponent(`/recipe/${recipeId}/cook`)}`);
+        return;
+      }
       onClose();
       router.replace(`/recipe/${recipeId}`);
     } catch {
@@ -44,7 +54,11 @@ export function CookingFinishDialog({
         <div>
           <p className="text-xs uppercase text-zinc-500 mb-1">Дууслаа</p>
           <h3 className="text-xl font-semibold">Үнэлгээ үлдээнэ үү?</h3>
-          <p className="text-sm text-zinc-400">Хадгалсан түүхэнд орно.</p>
+          <p className="text-sm text-zinc-400">
+            {user
+              ? "Хадгалсан түүхэнд орно."
+              : "Түүхэнд хадгалахын тулд эхлээд нэвтэрнэ үү."}
+          </p>
         </div>
         <label className="block text-xs text-zinc-500">
           Оноо (1–5)
@@ -75,11 +89,11 @@ export function CookingFinishDialog({
           </button>
           <button
             type="button"
-            disabled={pending}
+            disabled={pending || !ready}
             onClick={save}
             className="rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-black touch-manipulation"
           >
-            Хадгалах
+            {user ? "Хадгалах" : "Нэвтрэх"}
           </button>
         </div>
       </div>

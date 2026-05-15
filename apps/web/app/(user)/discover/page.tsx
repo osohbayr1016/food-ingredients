@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DiscoverOccasionCards } from "@/components/discover/DiscoverOccasionCards";
 import { cuisineEmoji } from "@/lib/cuisineEmoji";
 import { RecipeGrid } from "@/components/recipe/RecipeGrid";
 import { serverGetJson } from "@/lib/serverFetch";
@@ -19,8 +20,9 @@ export default async function DiscoverPage() {
         <h1 className="text-2xl font-bold text-zinc-900">Explore</h1>
         <p className="text-sm text-zinc-500">Browse cuisines and trending recipes.</p>
       </header>
+      <DiscoverOccasionCards />
       <section className="space-y-3">
-        <h2 className="text-sm font-bold text-zinc-900">Recipe categories</h2>
+        <h2 className="text-sm font-bold text-zinc-900">Хоолны төрөл</h2>
         <div className="grid grid-cols-2 gap-3">
           {(cuisinesRes.cuisines ?? []).slice(0, 6).map((row) => (
             <Link

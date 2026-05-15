@@ -2,9 +2,9 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
+import { RecipeTagFilter } from "./RecipeTagFilter";
 
 const cuisines = ["", "Italian", "French", "Chinese", "Korean", "Mongolian"];
-const tags = ["", "Quick", "Vegetarian", "Spicy", "Family"];
 
 export function RecipeFilters() {
   const router = useRouter();
@@ -34,26 +34,7 @@ export function RecipeFilters() {
             ))}
           </select>
         </label>
-        <label className="space-y-1">
-          <span className="text-xs text-zinc-500">Tag</span>
-          <select
-            disabled={pending}
-            defaultValue={sp?.get("tag") ?? ""}
-            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 touch-manipulation"
-            onChange={(e) => {
-              const q = new URLSearchParams(sp?.toString());
-              if (e.target.value) q.set("tag", e.target.value);
-              else q.delete("tag");
-              router.push(`/?${q.toString()}`);
-            }}
-          >
-            {tags.map((t) => (
-              <option key={t || "all-tags"} value={t}>
-                {t || "Any tag"}
-              </option>
-            ))}
-          </select>
-        </label>
+        <RecipeTagFilter />
       </div>
       <label className="space-y-1">
         <span className="text-xs text-zinc-500">Difficulty (1–3)</span>
