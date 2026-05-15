@@ -38,7 +38,36 @@ export function JsonRecipeUploadForm() {
 
     try {
       const text = await file.text();
-      const parsed = JSON.parse(text) as Partial<RecipePatchPayload>;
+      let parsed = JSON.parse(text);
+
+      if (parsed.recipe && Array.isArray(parsed.recipe.ingredients) && Array.isArray(parsed.recipe.steps)) {
+        const rawRecipe = parsed.recipe;
+        parsed = {
+          recipe: {
+            title: rawRecipe.title,
+            cuisine: rawRecipe.cuisine || rawRecipe.origin?.split(" ")[0] || "Unknown",
+            prep_time: rawRecipe.time?.preparation_minutes || 0,
+            cook_time: rawRecipe.time?.cook_minutes || 0,
+            difficulty: 2,
+            description: rawRecipe.description || "",
+            tips: rawRecipe.notes ? rawRecipe.notes.join("\n") : "",
+            serves: rawRecipe.base_servings || 2,
+            is_published: true,
+          },
+          ingredients: rawRecipe.ingredients.map((i: { name?: string; amount?: number; quantity?: number; unit?: string; category_id?: string }, index: number) => ({
+            name: String(i.name || ""),
+            quantity: Number(i.amount) || Number(i.quantity) || 0,
+            unit: String(i.unit || ""),
+            category_id: String(i.category_id || "cat-extra"),
+            sort_order: index,
+          })),
+          steps: rawRecipe.steps.map((s: { content?: string; description?: string; timer_seconds?: number }) => ({
+            description: String(s.content || s.description || ""),
+            timer_seconds: s.timer_seconds ? Number(s.timer_seconds) : null,
+          })),
+        };
+      }
+
       if (!parsed.recipe || !parsed.recipe.title) {
         throw new Error("Invalid JSON format. Expected RecipePatchPayload with a valid recipe title.");
       }
