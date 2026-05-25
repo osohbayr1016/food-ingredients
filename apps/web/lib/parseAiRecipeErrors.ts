@@ -6,6 +6,8 @@ const LABELS: Record<string, string> = {
   json_missing_recipe: "JSON дотор recipe талбар байхгүй.",
   json_bad_ingredients: "JSON-ийн ingredients массив биш байна.",
   json_bad_steps: "JSON-ийн steps массив биш байна.",
+  json_parse_error: "JSON формат буруу байна.",
+  json_not_object: "JSON объект байх ёстой.",
   empty_title: "Гарчиг хоосон.",
   empty_step_description: "Хоосон алхмын тайлбар байна.",
 };

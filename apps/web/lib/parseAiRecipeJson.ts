@@ -36,14 +36,50 @@ function normGalleryKeys(raw: unknown): string | null {
   return null;
 }
 
+function recipeTimeField(
+  raw: Record<string, unknown>,
+  flatKey: "prep_time" | "cook_time",
+  camelKey: "prepTime" | "cookTime",
+  nestedKey: "preparation_minutes" | "cook_minutes",
+): number {
+  const time =
+    raw.time && typeof raw.time === "object"
+      ? (raw.time as Record<string, unknown>)
+      : null;
+  return asFiniteInt(raw[flatKey] ?? raw[camelKey] ?? time?.[nestedKey], 0);
+}
+
+function normCuisine(raw: Record<string, unknown>): string {
+  const direct = String(raw.cuisine ?? raw.strArea ?? "").trim();
+  if (direct) return direct;
+  const origin = raw.origin;
+  if (typeof origin === "string" && origin.trim()) {
+    return origin.trim().split(/\s+/)[0] || "General";
+  }
+  return "General";
+}
+
+function normTips(raw: Record<string, unknown>): string | null {
+  if (raw.tips != null) {
+    const s = String(raw.tips).trim();
+    return s || null;
+  }
+  if (Array.isArray(raw.notes)) {
+    const s = raw.notes.map((n) => String(n).trim()).filter(Boolean).join("\n");
+    return s || null;
+  }
+  return null;
+}
+
 function normRecipe(raw: Record<string, unknown>): RecipeRow {
-  const title = String(raw.title ?? "").trim() || "Untitled";
-  const description = String(raw.description ?? "").trim();
+  const title =
+    String(raw.title ?? raw.name ?? raw.strMeal ?? "").trim() || "Untitled";
+  const description = String(raw.description ?? raw.summary ?? "").trim();
   return {
     title,
-    cuisine: String(raw.cuisine ?? "General").trim() || "General",
-    prep_time: asFiniteInt(raw.prep_time, 0),
-    cook_time: asFiniteInt(raw.cook_time, 0),
+    cuisine: normCuisine(raw),
+    prep_time: recipeTimeField(raw, "prep_time", "prepTime", "preparation_minutes"),
+    cook_time: recipeTimeField(raw, "cook_time", "cookTime", "cook_minutes"),
     difficulty: asFiniteDifficulty(raw.difficulty),
     image_r2_key:
       raw.image_r2_key === null ||
@@ -53,18 +89,18 @@ function normRecipe(raw: Record<string, unknown>): RecipeRow {
         : String(raw.image_r2_key).trim(),
     gallery_r2_keys: normGalleryKeys(raw.gallery_r2_keys),
     description: description || title,
-    tips:
-      raw.tips === null || raw.tips === undefined
-        ? null
-        : String(raw.tips).trim() || null,
-    serves: Math.max(1, asFiniteInt(raw.serves, 4)),
+    tips: normTips(raw),
+    serves: Math.max(
+      1,
+      asFiniteInt(raw.serves ?? raw.base_servings ?? raw.servings, 4),
+    ),
     is_published: normPublished(raw.is_published),
   };
 }
 
 function normIng(raw: Record<string, unknown>, idx: number): IngRow {
-  const name = String(raw.name ?? "").trim() || `Ingredient ${idx + 1}`;
-  const q = Number(raw.quantity);
+  const name = String(raw.name ?? raw.ingredient ?? "").trim() || `Ingredient ${idx + 1}`;
+  const q = Number(raw.quantity ?? raw.amount);
   const quantity = Number.isFinite(q) && q > 0 ? q : 1;
   return {
     name,
@@ -81,14 +117,119 @@ function normIng(raw: Record<string, unknown>, idx: number): IngRow {
 }
 
 function normStep(raw: Record<string, unknown>): StepRow {
+  const description = String(
+    raw.description ?? raw.content ?? raw.text ?? raw.instruction ?? "",
+  ).trim();
   return {
-    description: String(raw.description ?? "").trim(),
+    description,
     description_template:
       raw.description_template == null ? null : String(raw.description_template),
     timer_seconds:
       raw.timer_seconds == null ? null : asFiniteInt(raw.timer_seconds, 0),
     tip: raw.tip == null ? null : String(raw.tip),
   };
+}
+
+function stepsFromInstructions(text: string): Record<string, string>[] {
+  return text
+    .split(/\n+/)
+    .map((line) => line.replace(/^\d+[\.\)]\s*/, "").trim())
+    .filter(Boolean)
+    .map((description) => ({ description }));
+}
+
+function unwrapRecipeEnvelope(input: Record<string, unknown>): Record<string, unknown> {
+  for (const key of ["payload", "data", "result", "recipe_data"]) {
+    const inner = input[key];
+    if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+      return inner as Record<string, unknown>;
+    }
+  }
+  return input;
+}
+
+/** Normalize common JSON export shapes into `{ recipe, ingredients, steps }`. */
+export function coerceRecipeJsonShape(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  const root = unwrapRecipeEnvelope(input);
+  const rec = root.recipe;
+  const topIngredients = root.ingredients;
+  const topSteps = root.steps;
+
+  if (rec && typeof rec === "object") {
+    const recipeObj = rec as Record<string, unknown>;
+    const nestedIngredients = recipeObj.ingredients;
+    const nestedSteps = recipeObj.steps;
+
+    if (Array.isArray(nestedIngredients) || Array.isArray(nestedSteps)) {
+      const recipeMeta = Object.fromEntries(
+        Object.entries(recipeObj).filter(([k]) => k !== "ingredients" && k !== "steps"),
+      ) as Record<string, unknown>;
+      let steps = Array.isArray(nestedSteps) ? nestedSteps : topSteps;
+      if (!Array.isArray(steps) || steps.length === 0) {
+        const instr =
+          recipeObj.instructions ??
+          recipeObj.strInstructions ??
+          root.instructions;
+        if (typeof instr === "string" && instr.trim()) {
+          steps = stepsFromInstructions(instr);
+        }
+      }
+      return {
+        recipe: recipeMeta,
+        ingredients: Array.isArray(nestedIngredients) ? nestedIngredients : topIngredients,
+        steps,
+        ...(Array.isArray(root.tag_ids) ? { tag_ids: root.tag_ids } : {}),
+      };
+    }
+
+    if (Array.isArray(topIngredients) && Array.isArray(topSteps)) {
+      return root;
+    }
+  }
+
+  if (Array.isArray(topIngredients) && Array.isArray(topSteps)) {
+    const { ingredients, steps, tag_ids, ...recipeMeta } = root;
+    return {
+      recipe: recipeMeta,
+      ingredients,
+      steps,
+      ...(Array.isArray(tag_ids) ? { tag_ids } : {}),
+    };
+  }
+
+  return root;
+}
+
+function stripOuterFence(raw: string): string {
+  const t = raw.trim();
+  const fence = /^```(?:json)?\s*\n?([\s\S]*?)\n?```$/im;
+  const m = t.match(fence);
+  if (m) return m[1].trim();
+  return t;
+}
+
+export function parseRecipeJsonFile(
+  raw: string,
+): { ok: true; payload: RecipePatchPayload } | { ok: false; error: string } {
+  const t = raw.trim();
+  if (!t) return { ok: false, error: "empty_input" };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripOuterFence(t));
+  } catch {
+    return { ok: false, error: "json_parse_error" };
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { ok: false, error: "json_not_object" };
+  }
+
+  return normalizeRecipePatchPayload(
+    coerceRecipeJsonShape(parsed as Record<string, unknown>),
+  );
 }
 
 export function normalizeRecipePatchPayload(

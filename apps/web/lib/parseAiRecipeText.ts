@@ -1,5 +1,5 @@
 import type { RecipePatchPayload } from "./adminRecipeTypes";
-import { normalizeRecipePatchPayload } from "./parseAiRecipeJson";
+import { coerceRecipeJsonShape, normalizeRecipePatchPayload } from "./parseAiRecipeJson";
 import { parseMarkdownRecipe } from "./parseAiRecipeMarkdown";
 
 function stripOuterFence(raw: string): string {
@@ -31,7 +31,7 @@ export function parseAiRecipeText(
 
   const jsonObj = tryParseJsonObject(t);
   if (jsonObj) {
-    const n = normalizeRecipePatchPayload(jsonObj);
+    const n = normalizeRecipePatchPayload(coerceRecipeJsonShape(jsonObj));
     if (n.ok) return n;
   }
 
