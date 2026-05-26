@@ -1,3 +1,4 @@
+account_id = "aabe952df5d4e4b780339bf3b4217ed7"
 name = "food-ingredients-api"
 main = "src/index.ts"
 compatibility_date = "2025-05-06"

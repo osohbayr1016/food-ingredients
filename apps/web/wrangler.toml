@@ -2,6 +2,7 @@
 # From apps/web: pnpm run pages:build && wrangler deploy
 
 name = "food-ingredients-web"
+account_id = "aabe952df5d4e4b780339bf3b4217ed7"
 main = ".vercel/output/static/_worker.js/index.js"
 compatibility_date = "2025-05-06"
 compatibility_flags = ["nodejs_compat"]

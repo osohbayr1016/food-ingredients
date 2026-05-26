@@ -34,11 +34,9 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_R2_PUBLIC_BASE_URL: ${{ secrets.NEXT_PUBLIC_R2_PUBLIC_BASE_URL }}
         run: |
           missing=0
-          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID NEXT_PUBLIC_API_URL NEXT_PUBLIC_R2_PUBLIC_BASE_URL; do
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
             if [ -z "${!v}" ]; then echo "::error::Missing repository secret: $v"; missing=1; fi
           done
           [ "$missing" = "0" ]
@@ -52,9 +50,8 @@ jobs:
 
       - name: Build frontend (next-on-pages)
         env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-          # Must match API wrangler R2_PUBLIC_BASE_URL (bucket public r2.dev URL, no trailing slash).
-          NEXT_PUBLIC_R2_PUBLIC_BASE_URL: ${{ secrets.NEXT_PUBLIC_R2_PUBLIC_BASE_URL }}
+          NEXT_PUBLIC_API_URL: https://food-ingredients-api.osohoo691016.workers.dev
+          NEXT_PUBLIC_R2_PUBLIC_BASE_URL: https://pub-10e5fb7fa4594b528d76dcc4cc0272a4.r2.dev
         run: pnpm --filter web run pages:build
 
       - name: Deploy frontend Worker (static assets + _worker.js)

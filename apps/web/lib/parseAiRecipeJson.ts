@@ -71,9 +71,41 @@ function normTips(raw: Record<string, unknown>): string | null {
   return null;
 }
 
+function pickTitle(raw: Record<string, unknown>): string {
+  const meta =
+    raw.metadata && typeof raw.metadata === "object"
+      ? (raw.metadata as Record<string, unknown>)
+      : null;
+  return (
+    String(
+      raw.title ??
+        raw.name ??
+        raw.strMeal ??
+        raw.recipe_title ??
+        raw.recipe_name ??
+        raw.recipeName ??
+        raw.dish_name ??
+        raw.dishName ??
+        meta?.title ??
+        meta?.name ??
+        "",
+    ).trim() || "Untitled"
+  );
+}
+
+function normalizeListItems(raw: unknown, kind: "ingredient" | "step"): unknown[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item) => {
+    if (typeof item === "string") {
+      const text = item.trim();
+      return kind === "ingredient" ? { name: text } : { description: text };
+    }
+    return item;
+  });
+}
+
 function normRecipe(raw: Record<string, unknown>): RecipeRow {
-  const title =
-    String(raw.title ?? raw.name ?? raw.strMeal ?? "").trim() || "Untitled";
+  const title = pickTitle(raw);
   const description = String(raw.description ?? raw.summary ?? "").trim();
   return {
     title,
@@ -148,11 +180,27 @@ function unwrapRecipeEnvelope(input: Record<string, unknown>): Record<string, un
   return input;
 }
 
+function unwrapRecipeRoot(input: unknown): Record<string, unknown> {
+  if (Array.isArray(input)) {
+    const first = input.find((x) => x && typeof x === "object" && !Array.isArray(x));
+    if (first) return first as Record<string, unknown>;
+    return {};
+  }
+  if (!input || typeof input !== "object") return {};
+  const obj = input as Record<string, unknown>;
+  const recipes = obj.recipes;
+  if (Array.isArray(recipes)) {
+    const first = recipes.find((x) => x && typeof x === "object" && !Array.isArray(x));
+    if (first) return first as Record<string, unknown>;
+  }
+  return unwrapRecipeEnvelope(obj);
+}
+
 /** Normalize common JSON export shapes into `{ recipe, ingredients, steps }`. */
 export function coerceRecipeJsonShape(
   input: Record<string, unknown>,
 ): Record<string, unknown> {
-  const root = unwrapRecipeEnvelope(input);
+  const root = unwrapRecipeRoot(input);
   const rec = root.recipe;
   const topIngredients = root.ingredients;
   const topSteps = root.steps;
@@ -178,8 +226,11 @@ export function coerceRecipeJsonShape(
       }
       return {
         recipe: recipeMeta,
-        ingredients: Array.isArray(nestedIngredients) ? nestedIngredients : topIngredients,
-        steps,
+        ingredients: normalizeListItems(
+          Array.isArray(nestedIngredients) ? nestedIngredients : topIngredients,
+          "ingredient",
+        ),
+        steps: normalizeListItems(steps, "step"),
         ...(Array.isArray(root.tag_ids) ? { tag_ids: root.tag_ids } : {}),
       };
     }
@@ -189,13 +240,26 @@ export function coerceRecipeJsonShape(
     }
   }
 
-  if (Array.isArray(topIngredients) && Array.isArray(topSteps)) {
-    const { ingredients, steps, tag_ids, ...recipeMeta } = root;
+  const ingredients = normalizeListItems(topIngredients, "ingredient");
+  let steps = normalizeListItems(topSteps, "step");
+
+  if ((!steps.length || !Array.isArray(topSteps)) && ingredients.length) {
+    const instr =
+      root.instructions ?? root.strInstructions ?? root.instruction;
+    if (typeof instr === "string" && instr.trim()) {
+      steps = normalizeListItems(stepsFromInstructions(instr), "step");
+    }
+  }
+
+  if (ingredients.length && steps.length) {
+    const recipeMeta = Object.fromEntries(
+      Object.entries(root).filter(([k]) => k !== "ingredients" && k !== "steps" && k !== "tag_ids"),
+    ) as Record<string, unknown>;
     return {
       recipe: recipeMeta,
       ingredients,
       steps,
-      ...(Array.isArray(tag_ids) ? { tag_ids } : {}),
+      ...(Array.isArray(root.tag_ids) ? { tag_ids: root.tag_ids } : {}),
     };
   }
 
@@ -223,13 +287,13 @@ export function parseRecipeJsonFile(
     return { ok: false, error: "json_parse_error" };
   }
 
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return { ok: false, error: "json_not_object" };
-  }
+  const root =
+    parsed && typeof parsed === "object"
+      ? coerceRecipeJsonShape(parsed as Record<string, unknown>)
+      : null;
+  if (!root) return { ok: false, error: "json_not_object" };
 
-  return normalizeRecipePatchPayload(
-    coerceRecipeJsonShape(parsed as Record<string, unknown>),
-  );
+  return normalizeRecipePatchPayload(root);
 }
 
 export function normalizeRecipePatchPayload(
