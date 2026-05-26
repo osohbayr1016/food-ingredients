@@ -12,6 +12,11 @@ concurrency:
   group: cloudflare-deploy-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Baked into apps/web/wrangler.toml; needed at build time for Next.js client bundle.
+  NEXT_PUBLIC_API_URL: https://food-ingredients-api.osohoo691016.workers.dev
+  NEXT_PUBLIC_R2_PUBLIC_BASE_URL: https://pub-10e5fb7fa4594b528d76dcc4cc0272a4.r2.dev
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -27,36 +32,38 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify required secrets
+      - name: Require Cloudflare API token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          missing=0
-          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
-            if [ -z "${!v}" ]; then echo "::error::Missing repository secret: $v"; missing=1; fi
-          done
-          [ "$missing" = "0" ]
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Missing repository secret CLOUDFLARE_API_TOKEN."
+            echo "Create a token at https://dash.cloudflare.com/profile/api-tokens"
+            echo "Use the 'Edit Cloudflare Workers' template, then add it under"
+            echo "GitHub → Settings → Secrets and variables → Actions."
+            exit 1
+          fi
 
       - name: Deploy API Worker
-        working-directory: apps/api
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm exec wrangler deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: deploy
 
       - name: Build frontend (next-on-pages)
-        env:
-          NEXT_PUBLIC_API_URL: https://food-ingredients-api.osohoo691016.workers.dev
-          NEXT_PUBLIC_R2_PUBLIC_BASE_URL: https://pub-10e5fb7fa4594b528d76dcc4cc0272a4.r2.dev
         run: pnpm --filter web run pages:build
 
-      - name: Deploy frontend Worker (static assets + _worker.js)
-        working-directory: apps/web
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm exec wrangler deploy
+      - name: Deploy frontend Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/web
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: deploy
