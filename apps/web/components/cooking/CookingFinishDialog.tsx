@@ -3,7 +3,7 @@
 import { useAuth } from "@/components/auth/AuthContext";
 import { clientFetch } from "@/lib/clientApi";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function CookingFinishDialog({
   open,
@@ -24,6 +24,7 @@ export function CookingFinishDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const closeButton=useRef<HTMLButtonElement>(null);
 
   async function save() {
     if (!user) {
@@ -65,6 +66,20 @@ export function CookingFinishDialog({
     router.replace(`/recipe/${recipeId}`);
   }
 
+  useEffect(()=>{
+    if(!open)return;
+    const previous=document.activeElement instanceof HTMLElement?document.activeElement:null;
+    closeButton.current?.focus();
+    const onKey=(event:KeyboardEvent)=>{
+      if(event.key==="Escape" && !pending) {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown",onKey);
+    return ()=>{window.removeEventListener("keydown",onKey);previous?.focus();};
+  },[open,pending,onClose]);
+
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md grid place-items-center px-4" role="dialog" aria-modal="true" aria-labelledby="cooking-finish-title">
@@ -93,12 +108,14 @@ export function CookingFinishDialog({
         <textarea
           placeholder="Тэмдэглэл (сонголт)"
           value={note}
+          maxLength={2000}
           onChange={(e) => setNote(e.target.value)}
           className="w-full rounded-2xl bg-zinc-900 border border-white/10 p-3 text-sm min-h-[80px]"
         />
         {error && <p role="alert" className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-100">{error}</p>}
         <div className="flex flex-wrap gap-2 justify-end">
           <button
+            ref={closeButton}
             type="button"
             disabled={pending}
             onClick={() => onClose()}
