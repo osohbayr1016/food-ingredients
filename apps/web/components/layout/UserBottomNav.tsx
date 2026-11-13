@@ -98,7 +98,7 @@ export function UserBottomNav() {
             <PantryFabButton />
             <span
               className="mt-1 max-w-20 truncate text-center text-[11px] font-medium text-zinc-500"
-              style={{ color: here("/suggest") ? primary : undefined }}
+              style={{ color: here("/pantry") ? primary : undefined }}
             >
               Pantry
             </span>

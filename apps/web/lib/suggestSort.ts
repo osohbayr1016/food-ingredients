@@ -7,10 +7,13 @@ export function sortSuggestRows(
   const copy = [...rows];
   switch (key) {
     case "time":
-      return copy.sort(
-        (a, b) =>
-          a.prep_time + a.cook_time - (b.prep_time + b.cook_time),
-      );
+      return copy.sort((a, b) => {
+        const aTime = a.prep_time + a.cook_time;
+        const bTime = b.prep_time + b.cook_time;
+        // Imported unknown durations are stored as zero; never rank them as instant meals.
+        return (aTime > 0 ? aTime : Number.POSITIVE_INFINITY) -
+          (bTime > 0 ? bTime : Number.POSITIVE_INFINITY);
+      });
     case "difficulty":
       return copy.sort((a, b) => a.difficulty - b.difficulty);
     case "serves":

@@ -1,72 +1,18 @@
 "use client";
 
-import { PantryFabIcon } from "@/components/layout/PantryFabIcon";
-import { prepImageBlob } from "@/lib/pantryImage/prepImageBlob";
-import {
-  PANTRY_SCAN_EVENT,
-  stashPendingPantryScan,
-  type PantryScanEventDetail,
-} from "@/lib/pantryScanSession";
-import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useRef } from "react";
-
-const primary = "#E23E3E";
-
-function readBlobAsDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result as string);
-    r.onerror = () => reject(new Error("read failed"));
-    r.readAsDataURL(blob);
-  });
-}
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function PantryFabButton() {
-  const pathname = usePathname() ?? "";
-  const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const onSuggest = pathname === "/suggest";
-
-  const onFile = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      e.target.value = "";
-      if (!file?.type.startsWith("image/")) return;
-      const blob = await prepImageBlob(file);
-      const dataUrl = await readBlobAsDataUrl(blob);
-      if (onSuggest) {
-        window.dispatchEvent(
-          new CustomEvent<PantryScanEventDetail>(PANTRY_SCAN_EVENT, {
-            detail: { dataUrl },
-          }),
-        );
-        return;
-      }
-      stashPendingPantryScan(dataUrl);
-      router.push("/suggest");
-    },
-    [onSuggest, router],
-  );
-
+  const active = (usePathname() ?? "").startsWith("/pantry");
   return (
-    <>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="sr-only"
-        aria-hidden
-        onChange={onFile}
-      />
-      <button
-        type="button"
-        aria-label="Зургээр орц тоолж, жор тохируулах — Pantry scan"
-        onClick={() => inputRef.current?.click()}
-        className="flex h-14 w-14 items-center justify-center rounded-full shadow-lg shadow-rose-400/40 touch-manipulation"
-        style={{ backgroundColor: primary }}
-      >
-        <PantryFabIcon />
-      </button>
-    </>
+    <Link href="/pantry" aria-label="Миний хөргөгчийг нээх"
+      aria-current={active ? "page" : undefined}
+      className="flex h-14 w-14 items-center justify-center rounded-full bg-[#276440] text-white shadow-lg shadow-emerald-900/20 transition hover:bg-[#1f5134] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#276440]">
+      <svg width="27" height="27" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="6" y="2.5" width="12" height="19" rx="2.5" stroke="currentColor" strokeWidth="1.7"/>
+        <path d="M6 11h12M9 6.5v2M9 14v2.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+      </svg>
+    </Link>
   );
 }
