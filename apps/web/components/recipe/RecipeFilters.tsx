@@ -45,8 +45,8 @@ export function RecipeFilters() {
     q.delete("page");
     router.push(`/?${q.toString()}#recipe-list-heading`, { scroll: false });
   }
-  const advancedActive = ["cuisine","tag","exclude_allergens","max_calories","min_protein"]
-    .some(key => Boolean(sp?.get(key)));
+  const [expanded, setExpanded] = useState(() => ["cuisine","tag","exclude_allergens","max_calories","min_protein"]
+    .some(key => Boolean(sp?.get(key))));
   const selectedTime = sp?.get("max_cook_time") ?? "";
   const selectedDifficulty = sp?.get("difficulty") ?? "";
   const currentCuisine = sp?.get("cuisine") ?? "";
@@ -79,7 +79,7 @@ export function RecipeFilters() {
           </button>
         </div>
       </div>
-      <details defaultOpen={advancedActive} className="group rounded-2xl border border-[#e5ece2] bg-[#f9fcf7] p-4">
+      <details open={expanded} onToggle={event => setExpanded(event.currentTarget.open)} className="group rounded-2xl border border-[#e5ece2] bg-[#f9fcf7] p-4">
         <summary className="cursor-pointer text-sm font-semibold text-[#29573c]">Илүү нарийн шүүх · улс, харшил, шим тэжээл</summary>
         <div className="space-y-4 pt-4">
         <div className="grid grid-cols-2 gap-3">
