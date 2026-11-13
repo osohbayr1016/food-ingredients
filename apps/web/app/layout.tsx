@@ -38,7 +38,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#E23E3E",
+  themeColor: "#173f30",
 };
 
 export const dynamic = "force-dynamic";
@@ -51,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="mn">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-zinc-900`}
       >
