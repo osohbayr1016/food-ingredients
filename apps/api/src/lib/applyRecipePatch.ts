@@ -140,6 +140,12 @@ export async function applyRecipePatch(
   stmts.push(db.prepare(
     "DELETE FROM recipe_publication_queue WHERE recipe_id=? AND status='queued'"
   ).bind(recipeId));
+  // A changed recipe must never inherit prior editorial approval or remain public.
+  // This is server-enforced even if a stale admin form submits "approved".
+  stmts.push(db.prepare(`UPDATE recipe_metadata SET review_status='pending',
+      allergen_status='unknown', reviewed_at=NULL, updated_at=datetime('now')
+      WHERE recipe_id=?`).bind(recipeId));
+  stmts.push(db.prepare(`UPDATE recipes SET is_published=0 WHERE id=?`).bind(recipeId));
 
   await db.batch(stmts);
 }

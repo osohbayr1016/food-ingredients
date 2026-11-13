@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { ALLERGEN_CODES, metadataFromRow } from "../lib/recipeMetadata";
-import { expandRecipeSearch } from "../lib/recipeSearch";
+import { recipeFtsMatch } from "../lib/recipeSearch";
 
 export const recipes = new Hono<{ Bindings: Env }>();
 
@@ -62,27 +62,22 @@ recipes.get("/recipes", async (c) => {
     params.push(minProtein);
   }
   if (query) {
-    const terms = expandRecipeSearch(query);
-    const matches = `(instr(lower(r.title), ?) > 0 OR EXISTS (
-      SELECT 1 FROM ingredients ing
-      LEFT JOIN ingredient_canonicals canon ON canon.id=ing.ingredient_canonical_id
-      LEFT JOIN ingredient_aliases alias ON alias.canonical_id=ing.ingredient_canonical_id
-      WHERE ing.recipe_id=r.id AND (
-        instr(lower(ing.name), ?) > 0 OR instr(lower(canon.name), ?) > 0
-        OR instr(alias.normalized, ?) > 0
-      )
-    ))`;
-    where.push(`(${terms.map(() => matches).join(" OR ")})`);
-    for (const term of terms) params.push(term, term, term, term);
+    const match = recipeFtsMatch(query);
+    if (match) {
+      where.push(`r.id IN (SELECT recipe_id FROM recipe_search_fts WHERE recipe_search_fts MATCH ?)`);
+      params.push(match);
+    } else {
+      where.push("1 = 0");
+    }
   }
 
-  let sql = "SELECT DISTINCT r.* FROM recipes r";
+  let sql = "SELECT DISTINCT r.* FROM recipes r LEFT JOIN recipe_publication_dates pub ON pub.recipe_id=r.id";
   if (tag) {
     sql += ` JOIN recipe_tags rt ON rt.recipe_id = r.id
              JOIN tags tg ON tg.id = rt.tag_id AND tg.name = ?`;
     params.unshift(tag);
   }
-  sql += ` WHERE ${where.join(" AND ")} ORDER BY r.created_at DESC, r.id ASC LIMIT ? OFFSET ?`;
+  sql += ` WHERE ${where.join(" AND ")} ORDER BY COALESCE(pub.published_at,r.created_at) DESC, r.id ASC LIMIT ? OFFSET ?`;
   const stmt = c.env.DB.prepare(sql).bind(...params, pageSize + 1, (page - 1) * pageSize);
   const { results } = await stmt.all();
   const rows = results ?? [];

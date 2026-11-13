@@ -10,14 +10,25 @@ import {
   todayLocalIso, usablePantry, type PantryInventoryItem,
 } from "@/lib/pantryInventory";
 
+const SELECTED_PANTRY_KEY = "food-ingredients-pantry-selection-v1";
+
 export function PantryInventory() {
   const [items, setItems] = useState<PantryInventoryItem[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [ready, setReady] = useState(false);
   const [today, setToday] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
-    try { setItems(parsePantryStorage(localStorage.getItem(PANTRY_STORAGE_KEY))); }
-    catch { setError("Хадгалсан орцуудыг уншиж чадсангүй."); }
+    try {
+      const existing = parsePantryStorage(localStorage.getItem(PANTRY_STORAGE_KEY));
+      setItems(existing);
+      const raw = localStorage.getItem(SELECTED_PANTRY_KEY);
+      const saved: unknown = raw === null ? existing.slice(0,30).map(item => item.canonical_id) : JSON.parse(raw);
+      const allowed = new Set(existing.map(item => item.canonical_id));
+      setSelectedIds(new Set(Array.isArray(saved)
+        ? saved.filter((id): id is string => typeof id === "string" && allowed.has(id)).slice(0,30)
+        : existing.slice(0,30).map(item => item.canonical_id)));
+    } catch { setError("Хадгалсан орцуудыг уншиж чадсангүй."); }
     setToday(todayLocalIso());
     setReady(true);
   }, []);
@@ -27,11 +38,26 @@ export function PantryInventory() {
     catch { setError("Таны browser-д хадгалах зай хүрэлцэхгүй байна."); }
   }, [items, ready]);
 
+  useEffect(() => {
+    if (!ready) return;
+    try { localStorage.setItem(SELECTED_PANTRY_KEY,JSON.stringify([...selectedIds])); }
+    catch { setError("Сонголтыг хадгалах боломжгүй байна."); }
+  }, [ready,selectedIds]);
   const ids = useMemo(() => new Set(items.map(x => x.canonical_id)), [items]);
   const usable = useMemo(() => usablePantry(items, today), [items, today]);
   const expired = useMemo(() => items.filter(x => expiryStatus(x.expires_on, today) === "expired").length, [items, today]);
   const expiring = useMemo(() => items.filter(x => expiryStatus(x.expires_on, today) === "soon").length, [items, today]);
-  const matchingItems = usable.slice(0, 30);
+  const matchingItems = usable.filter(item => selectedIds.has(item.canonical_id)).slice(0,30);
+  function toggleSelection(id: string) {
+    const active = new Set(usable.map(item => item.canonical_id));
+    setSelectedIds(prev => {
+      // Expired/removed items must not block a valid 30-slot selection.
+      const next = new Set([...prev].filter(itemId => active.has(itemId)));
+      if (next.has(id)) next.delete(id);
+      else if (active.has(id) && next.size < 30) next.add(id);
+      return next;
+    });
+  }
   const href = "/suggest" + buildSuggestQueryString(matchingItems.map(x => ({
     canonical_id: x.canonical_id, name: x.name, quantity: x.quantity, unit: x.unit,
   })), true, {});
@@ -61,6 +87,7 @@ export function PantryInventory() {
           onPick={row => {
             if (items.length >= 100 || ids.has(row.canonical_id)) return;
             setItems(previous => [...previous, { ...row, quantity: "", unit: "", expires_on: "" }]);
+            setSelectedIds(previous => previous.size >= 30 ? previous : new Set(previous).add(row.canonical_id));
             setError("");
           }}
         />
@@ -94,10 +121,19 @@ export function PantryInventory() {
           <h2 className="text-xl font-bold text-[#254c35]">Миний орцууд</h2>
           {items.length > 0 && <button type="button"
             className="rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700"
-            onClick={() => { if (window.confirm("Хадгалсан бүх орцыг арилгах уу?")) setItems([]); }}>
+            onClick={() => { if (window.confirm("Хадгалсан бүх орцыг арилгах уу?")) {setItems([]);setSelectedIds(new Set());} }}>
             Бүгдийг арилгах
           </button>}
         </div>
+        {items.length > 0 && <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#edf6e8] p-3">
+          <span className="text-sm font-semibold text-[#276440]">{matchingItems.length}/30 орц сонгосон</span>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setSelectedIds(new Set(usable.slice(0,30).map(x => x.canonical_id)))}
+              className="min-h-10 rounded-lg bg-white px-3 text-xs font-semibold text-[#276440]">30 хүртэл сонгох</button>
+            <button type="button" onClick={() => setSelectedIds(new Set())}
+              className="min-h-10 rounded-lg border border-[#cde0c8] px-3 text-xs font-semibold text-[#276440]">Сонголт арилгах</button>
+          </div>
+        </div>}
         {!ready ? <p className="py-4 text-sm text-zinc-500">Ачаалж байна…</p> :
           items.length === 0 ? (
             <p className="rounded-2xl bg-[#f5f9f3] px-5 py-9 text-center text-sm text-zinc-600">Хоосон байна. Дээрх хайлтаар анхны орцоо сонгоорой.</p>
@@ -107,8 +143,18 @@ export function PantryInventory() {
                 const status = expiryStatus(item.expires_on, today);
                 return <li key={item.canonical_id} className="rounded-2xl border border-[#e4eee0] bg-[#fcfefb] p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <span className="min-w-0 font-semibold text-[#264632]">{item.name}</span>
-                    <button type="button" onClick={() => setItems(prev => prev.filter(x => x.canonical_id !== item.canonical_id))}
+                    <label className="flex min-w-0 items-center gap-3 text-sm font-semibold text-[#264632]">
+                      <input type="checkbox" checked={selectedIds.has(item.canonical_id)}
+                        disabled={(!selectedIds.has(item.canonical_id) && (status === "expired" || matchingItems.length >= 30))}
+                        onChange={() => toggleSelection(item.canonical_id)}
+                        aria-label={`${item.name} жор тааруулахад ашиглах`}
+                        className="h-5 w-5 shrink-0 accent-[#276440]"/>
+                      <span className="min-w-0">{item.name}</span>
+                    </label>
+                    <button type="button" onClick={() => {
+                      setItems(prev => prev.filter(x => x.canonical_id !== item.canonical_id));
+                      setSelectedIds(prev => {const n=new Set(prev);n.delete(item.canonical_id);return n;});
+                    }}
                       className="min-h-10 shrink-0 rounded-xl border border-zinc-200 px-3 text-xs font-semibold text-zinc-700">Арилгах</button>
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -138,7 +184,7 @@ export function PantryInventory() {
       </section>
 
       <div className="sticky bottom-[calc(80px+env(safe-area-inset-bottom))] z-20 rounded-2xl border border-[#d8e7d5] bg-white/95 p-3 shadow-lg backdrop-blur-sm md:bottom-5">
-        {usable.length > 30 && <p className="mb-2 text-center text-xs text-amber-800">Одоохондоо эхний 30 орцоор жор тааруулна. Бусад орц хадгалагдсан хэвээр байна.</p>}
+        {usable.length > 30 && <p className="mb-2 text-center text-xs text-amber-800">Жор тааруулах 30 орцоо дээрх жагсаалтаас хүссэнээрээ сонгоно уу. Бусад орц хадгалагдана.</p>}
         {matchingItems.length ? (
           <Link href={href} className="flex min-h-12 items-center justify-center rounded-xl bg-[#286543] px-6 text-center text-sm font-bold text-white hover:bg-[#1e5136]">
             {matchingItems.length} орцоор хоол санал болгох →

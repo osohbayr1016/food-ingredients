@@ -175,3 +175,197 @@ CREATE TABLE IF NOT EXISTS recipe_publication_queue (
 );
 CREATE INDEX IF NOT EXISTS ix_publication_queue_status_time
   ON recipe_publication_queue(status,queued_at);
+
+-- Unicode61 FTS5 powers Mongolian Cyrillic case-insensitive recipe search.
+-- Stored index is rebuilt from existing data and automatically refreshed.
+CREATE VIRTUAL TABLE IF NOT EXISTS recipe_search_fts USING fts5(
+  recipe_id UNINDEXED, title, ingredient_terms,
+  tokenize='unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS recipes_search_insert AFTER INSERT ON recipes BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id=NEW.id;
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id=NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS recipes_search_update AFTER UPDATE ON recipes BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id=NEW.id;
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id=NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS recipes_search_delete AFTER DELETE ON recipes BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id=OLD.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS ingredients_search_insert AFTER INSERT ON ingredients BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id=NEW.recipe_id;
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id=NEW.recipe_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS ingredients_search_update AFTER UPDATE ON ingredients BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id=OLD.recipe_id;
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id=OLD.recipe_id;
+  DELETE FROM recipe_search_fts WHERE recipe_id=NEW.recipe_id;
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id=NEW.recipe_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS ingredients_search_delete AFTER DELETE ON ingredients BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id=OLD.recipe_id;
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id=OLD.recipe_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS ingredient_canonicals_search_insert AFTER INSERT ON ingredient_canonicals BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=NEW.id);
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=NEW.id);
+END;
+
+CREATE TRIGGER IF NOT EXISTS ingredient_canonicals_search_update AFTER UPDATE ON ingredient_canonicals BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=OLD.id);
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=OLD.id);
+  DELETE FROM recipe_search_fts WHERE recipe_id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=NEW.id);
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=NEW.id);
+END;
+
+CREATE TRIGGER IF NOT EXISTS ingredient_canonicals_search_delete AFTER DELETE ON ingredient_canonicals BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=OLD.id);
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=OLD.id);
+END;
+
+CREATE TRIGGER IF NOT EXISTS ingredient_aliases_search_insert AFTER INSERT ON ingredient_aliases BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=NEW.canonical_id);
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=NEW.canonical_id);
+END;
+
+CREATE TRIGGER IF NOT EXISTS ingredient_aliases_search_update AFTER UPDATE ON ingredient_aliases BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=OLD.canonical_id);
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=OLD.canonical_id);
+  DELETE FROM recipe_search_fts WHERE recipe_id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=NEW.canonical_id);
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=NEW.canonical_id);
+END;
+
+CREATE TRIGGER IF NOT EXISTS ingredient_aliases_search_delete AFTER DELETE ON ingredient_aliases BEGIN
+  DELETE FROM recipe_search_fts WHERE recipe_id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=OLD.canonical_id);
+  INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+    SELECT r.id,r.title,COALESCE((SELECT group_concat(
+      i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+      COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+      ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+      WHERE i.recipe_id=r.id),'')
+    FROM recipes r WHERE r.id IN (SELECT DISTINCT i.recipe_id FROM ingredients i WHERE i.ingredient_canonical_id=OLD.canonical_id);
+END;
+
+INSERT INTO recipe_search_fts(recipe_id,title,ingredient_terms)
+SELECT r.id,r.title,COALESCE((SELECT group_concat(
+  i.name || ' ' || COALESCE(c.name,'') || ' ' ||
+  COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_aliases a WHERE a.canonical_id=i.ingredient_canonical_id),''),
+  ' ') FROM ingredients i LEFT JOIN ingredient_canonicals c ON c.id=i.ingredient_canonical_id
+  WHERE i.recipe_id=r.id),'')
+FROM recipes r WHERE NOT EXISTS (
+  SELECT 1 FROM recipe_search_fts f WHERE f.recipe_id=r.id
+);
+
+-- One UTC-day reservation prevents multiple cron/retry deliveries on the same day.
+CREATE TABLE IF NOT EXISTS recipe_publication_days (
+  day_utc TEXT PRIMARY KEY,
+  recipe_id TEXT REFERENCES recipes(id) ON DELETE SET NULL,
+  published_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_recipe_publication_days_published ON recipe_publication_days(published_at);
+
+-- Reviewer attestation and separate publication date preserve the original creation date.
+CREATE TABLE IF NOT EXISTS recipe_review_events (
+  id TEXT PRIMARY KEY,
+  recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+  actor_id TEXT NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('approved','published')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_recipe_review_events_recipe ON recipe_review_events(recipe_id,created_at DESC);
+
+CREATE TABLE IF NOT EXISTS recipe_publication_dates (
+  recipe_id TEXT PRIMARY KEY REFERENCES recipes(id) ON DELETE CASCADE,
+  published_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_recipe_publication_dates_time ON recipe_publication_dates(published_at DESC);
+-- Safe idempotent backfill of existing public recipes.
+INSERT OR IGNORE INTO recipe_publication_dates(recipe_id,published_at)
+ SELECT id,created_at FROM recipes WHERE is_published=1;

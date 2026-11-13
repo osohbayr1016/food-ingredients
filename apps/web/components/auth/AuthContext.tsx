@@ -50,15 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const res = await clientFetch("/auth/me");
-      if (!res.ok) {
-        setUser(null);
-        return; // A temporary server error must not destroy the existing token.
-      }
+      if (!res.ok) return; // Temporary API errors must not invalidate an active session.
       const data = (await res.json()) as { user: AuthUser | null };
       setUser(data.user ?? null);
       if (!data.user) clearAuthToken();
     } catch {
-      setUser(null); // Offline: retain token for a later sign-in check.
+      // Offline: retain the existing user/session for a later sign-in check.
     }
   }, []);
 
@@ -103,8 +100,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const data = (await res.json()) as { token: string; user: AuthUser };
     setAuthToken(data.token);
+    if (getAuthToken() !== data.token) throw new Error("browser_storage_unavailable");
+    invalidateRecipeLibraryIds();
     setTok(data.token);
     setUser(data.user);
+    dispatchLibrary();
   }, []);
 
   const logout = useCallback(() => {

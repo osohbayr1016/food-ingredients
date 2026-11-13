@@ -81,6 +81,33 @@ jobs:
           packageManager: pnpm
           command: d1 execute food-ingredients --remote --file=db/0010_publication_queue.sql --yes
 
+      - name: Install Unicode recipe search FTS index
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0011_unicode_recipe_search.sql --yes
+
+      - name: Apply daily publication uniqueness guard
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0012_publication_days.sql --yes
+
+      - name: Apply editorial review and publication date tracking
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0013_editorial_audit.sql --yes
+
       - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v3
         with:

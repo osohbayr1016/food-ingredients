@@ -56,6 +56,8 @@ export function ProfileNutritionAccount() {
         setValue(DEFAULT_BODY_STATS);
         setTargets(null);
       }
+    } catch {
+      setErr("Мэдээлэл унших үед сүлжээний алдаа гарлаа. Дахин оролдоорой.");
     } finally {
       setLoading(false);
     }
@@ -87,6 +89,8 @@ export function ProfileNutritionAccount() {
         return;
       }
       if (data.targets) setTargets(data.targets);
+    } catch {
+      setErr("Холболт тасарсан байна. Дахин оролдоорой.");
     } finally {
       setBusy(false);
     }

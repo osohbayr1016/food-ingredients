@@ -10,11 +10,13 @@ export function CookingFinishDialog({
   recipeId,
   onClose,
   onSaved,
+  onDone,
 }: {
   open: boolean;
   recipeId: string;
   onClose: () => void;
   onSaved?: () => void;
+  onDone?: () => void;
 }) {
   const { user, ready } = useAuth();
   const [rating, setRating] = useState(5);
@@ -58,17 +60,22 @@ export function CookingFinishDialog({
     }
   }
 
+  function finishWithoutSaving() {
+    onDone?.();
+    router.replace(`/recipe/${recipeId}`);
+  }
+
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-md grid place-items-center px-4">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md grid place-items-center px-4" role="dialog" aria-modal="true" aria-labelledby="cooking-finish-title">
       <div className="w-full max-w-md rounded-3xl border border-white/15 bg-zinc-950 p-6 space-y-4">
         <div>
           <p className="text-xs uppercase text-zinc-500 mb-1">Дууслаа</p>
-          <h3 className="text-xl font-semibold">Үнэлгээ үлдээнэ үү?</h3>
+          <h3 id="cooking-finish-title" className="text-xl font-semibold">Хоолоо хийж дууслаа!</h3>
           <p className="text-sm text-zinc-400">
             {user
               ? "Хадгалсан түүхэнд орно."
-              : "Түүхэнд хадгалахын тулд эхлээд нэвтэрнэ үү."}
+              : "Нэвтрэхгүйгээр хоолоо дуусгаж болно. Түүх хадгалах бол бүртгэл хэрэгтэй."}
           </p>
         </div>
         <label className="block text-xs text-zinc-500">
@@ -90,14 +97,18 @@ export function CookingFinishDialog({
           className="w-full rounded-2xl bg-zinc-900 border border-white/10 p-3 text-sm min-h-[80px]"
         />
         {error && <p role="alert" className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-100">{error}</p>}
-        <div className="flex gap-2 justify-end">
+        <div className="flex flex-wrap gap-2 justify-end">
           <button
             type="button"
             disabled={pending}
             onClick={() => onClose()}
             className="rounded-full px-4 py-2 text-sm touch-manipulation"
           >
-            Алгасах
+            Үргэлжлүүлэх
+          </button>
+          <button type="button" disabled={pending} onClick={finishWithoutSaving}
+            className="rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            Хадгалахгүй дуусгах
           </button>
           <button
             type="button"

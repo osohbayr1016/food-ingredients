@@ -24,7 +24,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
               <Link href="/profile" className="hover:text-[#153d29]">Профайл</Link>
             </nav>
             <div className="flex shrink-0 items-center gap-2">
-              <Link href="/pantry" className="rounded-full bg-[#e6f2e3] px-3 py-2 text-xs font-semibold text-[#204932] md:hidden">Хөргөгч</Link>
+              <Link href="/pantry" className="rounded-full bg-[#e6f2e3] px-3 py-2 text-xs font-semibold text-[#204932] lg:hidden">Хөргөгч</Link>
               <Link href="/search" className="rounded-full border border-[#dbe8d9] px-3 py-2 text-xs font-semibold text-[#204932] md:px-5 md:text-sm">Хайх</Link>
             </div>
           </div>

@@ -78,15 +78,11 @@ export function RecipeMetaFields({ recipe, onChange }: Props) {
           />
         </label>
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={!!recipe.is_published}
-          onChange={(e) => patch({ is_published: e.target.checked })}
-          className="h-4 w-4 rounded border-zinc-300 accent-red-500"
-        />
-        <span className="text-zinc-700">Вэб дээр нийтлэх</span>
-      </label>
+      <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+        Одоогийн төлөв: <strong>{recipe.is_published ? "Нийтэлсэн" : "Ноорог"}</strong>.
+        Аливаа өөрчлөлт хадгалсны дараа жор шалгалт хүлээнэ.
+        Хяналт баталгаажсаны дараа тусдаа товчоор нийтэлнэ.
+      </p>
       <label className="block text-sm">
         <span className="text-zinc-600">Тайлбар</span>
         <textarea

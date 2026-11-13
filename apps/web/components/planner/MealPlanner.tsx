@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { clientFetch } from "@/lib/clientApi";
 import type { RecipeDetail, RecipeListItem } from "@/lib/types";
 import { aggregateMealShopping, mondayOfWeek, type ShoppingLine } from "@/lib/mealShopping";
@@ -80,13 +80,19 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
   const [checked, setChecked] = useState<Record<string,boolean>>({});
   const [portions, setPortions] = useState<Record<string,number>>({});
   const [titles, setTitles] = useState<Record<string,string>>({});
+  const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<RecipeListItem[] | null>(null);
+  const [searchResultQuery, setSearchResultQuery] = useState("");
+  const [searchHasMore, setSearchHasMore] = useState(false);
+  const [searchNextPage, setSearchNextPage] = useState(2);
+  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
+  const [searchMoreError, setSearchMoreError] = useState(false);
+  const currentSearch = useRef(query.trim().toLowerCase());
   const [selectedMeta, setSelectedMeta] = useState<Record<string, { title: string; serves: number }>>({});
   const [searchError, setSearchError] = useState(false);
   const [searchBusy, setSearchBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [day, setDay] = useState(0);
-  const [query, setQuery] = useState("");
   const [shopping, setShopping] = useState<ShoppingLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -96,8 +102,10 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
 
   useEffect(() => {
     try {
-      const source = localStorage.getItem(planKey) ??
-        (isCurrent ? localStorage.getItem(LEGACY_PLAN_KEY) : null);
+      const existing = localStorage.getItem(planKey);
+      const legacy = existing === null && isCurrent ? localStorage.getItem(LEGACY_PLAN_KEY) : null;
+      const source = existing ?? legacy;
+      if (legacy !== null) localStorage.removeItem(LEGACY_PLAN_KEY); // migrate only once
       const raw: unknown = JSON.parse(source ?? "{}");
       if (raw && typeof raw === "object" && !Array.isArray(raw)) {
         setPlan(Object.fromEntries(Object.entries(raw).filter(([key,value]) =>
@@ -140,8 +148,14 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
 
   useEffect(() => {
     const controller = new AbortController();
-    if (query.trim().length < 2) {
-      setSearchResults(null);
+    const term = query.trim().toLowerCase();
+    setSearchResults(null);
+    setSearchResultQuery("");
+    setSearchHasMore(false);
+    setSearchNextPage(2);
+    setSearchMoreError(false);
+    if (term.length < 2) {
+      setSearchBusy(false);
       setSearchError(false);
       return () => controller.abort();
     }
@@ -149,22 +163,61 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
     setSearchError(false);
     const timer = setTimeout(async () => {
       try {
-        const res = await clientFetch(`/recipes?q=${encodeURIComponent(query.trim())}&page_size=100`,
+        const res = await clientFetch(`/recipes?q=${encodeURIComponent(term)}&page_size=100`,
           {signal: controller.signal});
         if (!res.ok) throw new Error("recipe_search_failed");
-        const data = await res.json() as { recipes?: RecipeListItem[] };
-        if (!controller.signal.aborted) setSearchResults(data.recipes ?? []);
+        const data = await res.json() as {
+          recipes?: RecipeListItem[]; pagination?: {has_more?:boolean};
+        };
+        if (!controller.signal.aborted && currentSearch.current === term) {
+          setSearchResults(Array.isArray(data.recipes) ? data.recipes : []);
+          setSearchResultQuery(term);
+          setSearchHasMore(Boolean(data.pagination?.has_more));
+        }
       } catch {
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && currentSearch.current === term) {
           setSearchError(true);
           setSearchResults([]);
+          setSearchResultQuery(term);
         }
       } finally {
-        if (!controller.signal.aborted) setSearchBusy(false);
+        if (!controller.signal.aborted && currentSearch.current === term) setSearchBusy(false);
       }
     }, 300);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [query]);
+
+  async function loadMoreSearch() {
+    const term = query.trim().toLowerCase();
+    if (!searchHasMore || searchLoadingMore || searchResultQuery !== term) return;
+    setSearchLoadingMore(true);
+    setSearchMoreError(false);
+    const page = searchNextPage;
+    try {
+      const res = await clientFetch(`/recipes?q=${encodeURIComponent(term)}&page_size=100&page=${page}`);
+      if (!res.ok) throw new Error("recipe_search_more_failed");
+      const data = await res.json() as {recipes?:RecipeListItem[];pagination?:{has_more?:boolean}};
+      if (currentSearch.current !== term) return;
+      setSearchResults(prev => {
+        const seen = new Set((prev ?? []).map(row => row.id));
+        return [...(prev ?? []),...(data.recipes ?? []).filter(row => !seen.has(row.id))];
+      });
+      setSearchNextPage(page+1);
+      setSearchHasMore(Boolean(data.pagination?.has_more));
+    } catch {
+      if (currentSearch.current === term) setSearchMoreError(true);
+    } finally {
+      setSearchLoadingMore(false);
+    }
+  }
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === PANTRY_STORAGE_KEY) setRetry(n => n + 1);
+    };
+    window.addEventListener("storage",onStorage);
+    return () => window.removeEventListener("storage",onStorage);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -211,9 +264,9 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
 
   const matchingRecipes = useMemo(() => {
     const keyword = query.trim().toLowerCase();
-    if (keyword.length >= 2 && searchResults) return searchResults;
+    if (keyword.length >= 2) return searchResultQuery === keyword && searchResults ? searchResults : [];
     return keyword ? recipes.filter(r => r.title.toLowerCase().includes(keyword) || r.cuisine.toLowerCase().includes(keyword)) : recipes;
-  }, [query,recipes,searchResults]);
+  }, [query,recipes,searchResults,searchResultQuery]);
 
   const filled = Object.values(plan).filter(Boolean).length;
   const formatted = (n: number) => Number.isInteger(n) ? String(n) : String(Math.round(n*1000)/1000);
@@ -248,12 +301,19 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
           ))}
         </div>
         <label className="block text-sm font-medium text-zinc-700">Хоолны нэрээр шүүх
-          <input value={query} onChange={e=>setQuery(e.target.value)} type="search"
+          <input value={query} onChange={e=>{currentSearch.current=e.target.value.trim().toLowerCase();setQuery(e.target.value);}} type="search"
             placeholder="Жишээ: тахиа, шөл..."
             className="mt-2 w-full rounded-xl border border-[#d8e6d5] px-4 py-3 text-sm outline-none focus:border-[#2e7449]" />
         </label>
         {searchBusy && <p role="status" className="text-xs text-zinc-500">Хоол хайж байна…</p>}
         {searchError && <p role="alert" className="text-xs text-amber-800">Хайлтын мэдээлэл ачаалж чадсангүй.</p>}
+        {searchHasMore && searchResultQuery === query.trim().toLowerCase() && (
+          <button type="button" disabled={searchLoadingMore} onClick={() => void loadMoreSearch()}
+            className="min-h-11 rounded-xl border border-[#cde2c8] bg-[#f4faf1] px-4 text-sm font-semibold text-[#276440] disabled:opacity-50">
+            {searchLoadingMore ? "Нэмж хайж байна…" : "Дараагийн жоруудыг үзэх"}
+          </button>
+        )}
+        {searchMoreError && <p role="alert" className="text-xs text-amber-800">Нэмэлт жор ачаалж чадсангүй. Дахин оролдоорой.</p>}
         <div className="grid gap-3 md:grid-cols-3">
           {MEALS.map(meal => {
             const key = `${day}|${meal.id}`, chosen = plan[key] ?? "";
