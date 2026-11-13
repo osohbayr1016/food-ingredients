@@ -27,7 +27,7 @@ const GROUPS = [
 export function expandRecipeSearch(query: string): string[] {
   const q = query.trim().toLowerCase().replace(/\s+/g," ").slice(0,100);
   if (!q) return [];
-  const group = GROUPS.find(values => values.includes(q as never));
+  const group = GROUPS.find(values => values.some(value => value === q));
   return [...new Set([q,...(group ?? [])])].slice(0,6);
 }
 
