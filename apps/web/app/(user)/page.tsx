@@ -10,6 +10,7 @@ const journeys = [
   { href: "/?max_cook_time=30", icon: "⏱", title: "Хурдан хоол", detail: "30 минут болон түүнээс бага", color: "bg-[#fff3df]" },
   { href: "/discover", icon: "🍲", title: "Шинэ жор", detail: "Дэлхийн хоолны санаанууд", color: "bg-[#f7eae5]" },
   { href: "/profile", icon: "🎯", title: "Миний зорилго", detail: "Хооллолтын зорилгоо тохируулах", color: "bg-[#eaeafa]" },
+  { href: "/plan", icon: "📅", title: "7 хоногийн план", detail: "Хоол болон авах орцын жагсаалт", color: "bg-[#e7f4ef]" },
 ];
 
 function getParam(
@@ -75,7 +76,7 @@ export default async function HomePage({
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#4c7a53]">Танд зориулсан</p>
           <h2 id="start-title" className="mt-1 text-2xl font-bold tracking-tight">Хаанаас эхлэх вэ?</h2>
         </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {journeys.map((item) => (
             <Link key={item.href} href={item.href} className={`group flex min-h-40 flex-col rounded-3xl p-5 transition hover:-translate-y-1 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#40834c] ${item.color}`}>
               <span className="text-3xl" aria-hidden>{item.icon}</span>
