@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { restoreCookingSession } from "@/lib/cookingSession";
 import { CookingFinishDialog } from "@/components/cooking/CookingFinishDialog";
 import { CookingProgress } from "@/components/cooking/CookingProgress";
 import { CookingSlideDeck } from "@/components/cooking/CookingSlideDeck";
@@ -15,26 +16,6 @@ import { CookingStepPanel } from "@/components/cooking/CookingStepPanel";
 import type { RecipeDetail } from "@/lib/types";
 
 const LEGACY_STORAGE = "food_ingredients_cook_v1";
-
-function restoreSession(raw: string | null, recipeId: string, stepCount: number) {
-  if (!raw) return null;
-  try {
-    const session = JSON.parse(raw) as {
-      recipeId?: unknown; step?: unknown; timers?: unknown;
-    };
-    if (session.recipeId !== recipeId) return null;
-    const step = typeof session.step === "number" && Number.isSafeInteger(session.step)
-      ? Math.min(Math.max(session.step, 0), Math.max(stepCount - 1, 0)) : 0;
-    const timers = Array.isArray(session.timers)
-      ? session.timers.slice(0, 20).filter((t): t is { id: string; label: string; endsAt: number } =>
-          t && typeof t.id === "string" && typeof t.label === "string" &&
-          t.id.length < 120 && t.label.length < 120 &&
-          typeof t.endsAt === "number" && Number.isFinite(t.endsAt) &&
-          t.endsAt > Date.now() - 60_000)
-      : [];
-    return { step, timers };
-  } catch { return null; }
-}
 
 export function CookingExperience({
   data,
@@ -68,7 +49,7 @@ export function CookingExperience({
     try {
       const raw = localStorage.getItem(sessionKey) ??
         localStorage.getItem(LEGACY_STORAGE);
-      const session = restoreSession(raw, data.recipe.id, steps.length);
+      const session = restoreCookingSession(raw, data.recipe.id, steps.length);
       setIndex(session?.step ?? 0);
       bootstrap(session?.timers ?? []);
     } catch {
@@ -100,7 +81,7 @@ export function CookingExperience({
   }, [pulse, remaining, timers]);
 
   function restartCooking(force = false) {
-    if (!force && timers.length && !window.confirm("Ажиллаж буй таймеруудыг зогсоож шинээр эхлэх үү?")) return;
+    if (!force && (timers.length>0 || index>0) && !window.confirm("Ахиц болон таймеруудыг арилгаж шинээр эхлэх үү?")) return;
     try {
       localStorage.removeItem(sessionKey);
       const prefix = `ing_ck_v2:${data.recipe.id}:${serves}:`;
@@ -117,6 +98,22 @@ export function CookingExperience({
   }
 
   const total = steps.length;
+  const closeFinish = useCallback(() => setFinish(false),[]);
+  useEffect(() => {
+    function onKeyboard(event: KeyboardEvent) {
+      if(event.ctrlKey||event.altKey||event.metaKey||sheet||finish) return;
+      const target=event.target;
+      if(target instanceof HTMLElement && (target.isContentEditable ||
+         ["INPUT","TEXTAREA","SELECT","BUTTON"].includes(target.tagName))) return;
+      if(event.key==="ArrowRight" && index<total-1){
+        event.preventDefault();setIndex(i=>Math.min(total-1,i+1));
+      }else if(event.key==="ArrowLeft" && index>0){
+        event.preventDefault();setIndex(i=>Math.max(0,i-1));
+      }
+    }
+    window.addEventListener("keydown",onKeyboard);
+    return ()=>window.removeEventListener("keydown",onKeyboard);
+  },[index,total,sheet,finish]);
 
   return (
     <div className="relative min-h-dvh bg-zinc-950 text-zinc-50">
@@ -139,10 +136,8 @@ export function CookingExperience({
           <CookingStepPanel
             step={steps[i]}
             index={i}
-            total={total}
             subs={subs}
             upsert={upsert}
-            onFinish={() => setFinish(true)}
           />
         )}
       />
@@ -152,19 +147,20 @@ export function CookingExperience({
         total={total}
         onPrev={() => setIndex((v) => Math.max(0, v - 1))}
         onNext={() => setIndex((v) => Math.min(total - 1, v + 1))}
+        onFinish={() => setFinish(true)}
         onIngredients={() => setSheet(true)}
       />
       <TimerBubbleStack
         timers={timers}
         onDismiss={clear}
-        label={(t) => formatMmSs(remaining(t))}
+        label={(t) => remaining(t)===0 ? "Дууссан" : formatMmSs(remaining(t))}
       />
       <IngredientSheet open={sheet} onClose={() => setSheet(false)} items={data.ingredients}
         ctx={ctx} sessionId={`${data.recipe.id}:${serves}`} serves={serves} />
       <CookingFinishDialog
         open={finish}
         recipeId={data.recipe.id}
-        onClose={() => setFinish(false)}
+        onClose={closeFinish}
         onSaved={() => restartCooking(true)}
         onDone={() => restartCooking(true)}
       />
