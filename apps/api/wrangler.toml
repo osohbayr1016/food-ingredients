@@ -23,4 +23,10 @@ AUTO_IMPORT_ENABLED = "false"
 PUBLIC_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://food-ingredients-web.pages.dev,https://food-ingredients-web.osohoo691016.workers.dev"
 R2_PUBLIC_BASE_URL = "https://pub-10e5fb7fa4594b528d76dcc4cc0272a4.r2.dev"
 R2_BUCKET_NAME = "food-ingredients-images"
-# ADMIN_SECRET, JWT_SECRET, THEMEALDB_API_KEY and R2 credentials MUST be set as Wrangler secrets in production.
+# Do not deploy an API without its authentication secrets.
+# Wrangler validates these bindings before deployment to protect existing sessions.
+[secrets]
+required = ["ADMIN_SECRET", "JWT_SECRET"]
+
+# THEMEALDB_API_KEY and R2 S3 credentials should also be configured as secrets
+# before enabling automated imports or admin media upload.
