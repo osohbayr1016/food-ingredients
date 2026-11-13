@@ -8,10 +8,36 @@ import { validateRecipePatch } from "../../lib/recipeValidation";
 export const recipesAdmin = new Hono<{ Bindings: Env }>();
 
 recipesAdmin.get("/recipes", async (c) => {
-  const { results } = await c.env.DB.prepare(
-    `SELECT * FROM recipes ORDER BY datetime(created_at) DESC`,
-  ).all();
-  return c.json({ recipes: results ?? [] });
+  const page = Number(c.req.query("page") || 1);
+  const pageSize = Number(c.req.query("page_size") || 30);
+  const status = c.req.query("status") || "all";
+  if (!Number.isSafeInteger(page) || page < 1 || page > 1000 ||
+      !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100) {
+    return c.json({ error: "invalid_pagination" }, 400);
+  }
+  if (!["all", "draft", "published", "pending", "ready"].includes(status)) {
+    return c.json({ error: "invalid_status" }, 400);
+  }
+  const where: string[] = [];
+  if (status === "draft") where.push("r.is_published=0");
+  if (status === "published") where.push("r.is_published=1");
+  if (status === "pending") {
+    where.push("r.is_published=0 AND COALESCE(m.review_status,'pending') <> 'approved'");
+  }
+  if (status === "ready") {
+    where.push("r.is_published=0 AND m.review_status='approved' AND COALESCE(m.license_name,'') <> ''");
+  }
+  const { results } = await c.env.DB.prepare(`SELECT r.id,r.title,r.cuisine,
+      r.is_published,r.created_at,m.review_status,m.license_name
+    FROM recipes r LEFT JOIN recipe_metadata m ON m.recipe_id=r.id
+    ${where.length ? "WHERE " + where.join(" AND ") : ""}
+    ORDER BY datetime(r.created_at) DESC,r.id ASC LIMIT ? OFFSET ?`)
+    .bind(pageSize + 1, (page - 1) * pageSize).all();
+  const rows = results ?? [];
+  return c.json({
+    recipes: rows.slice(0,pageSize),
+    pagination: {page,page_size:pageSize,has_more:rows.length > pageSize},
+  });
 });
 
 recipesAdmin.get("/recipes/:id", async (c) => {
