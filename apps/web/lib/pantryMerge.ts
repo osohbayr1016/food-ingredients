@@ -1,4 +1,4 @@
-import { normalizePantry, type PantryInventoryItem } from "./pantryInventory";
+import { normalizePantry, type PantryInventoryItem } from "./pantryInventory.ts";
 
 /** Keeps device edits on duplicate IDs, never guesses which quantity is fresher. */
 export function mergePantryInventories(local: PantryInventoryItem[], remote: PantryInventoryItem[]) {
