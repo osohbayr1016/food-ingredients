@@ -74,3 +74,28 @@ export function metadataUpsert(db: D1Database, recipeId: string, raw: RecipeMeta
     m.calories_kcal,m.protein_g,m.carbs_g,m.fat_g,m.review_status
   );
 }
+
+/** Never imply that missing review data means a food is safe. */
+export function metadataFromRow(row: Record<string, unknown> | null) {
+  if (!row) return { review_status: "pending" as const, allergen_status: "unknown" as const,
+    allergens: [] as string[], source_url: null, license_name: null, video_url: null,
+    nutrition_source: null, calories_kcal: null, protein_g: null, carbs_g: null, fat_g: null };
+  let allergens: string[] = [];
+  try {
+    const parsed: unknown = JSON.parse(String(row.allergens_json ?? "[]"));
+    if (Array.isArray(parsed)) allergens = parsed.filter((x): x is string => typeof x === "string" && VALID_CODES.has(x));
+  } catch { /* treat invalid metadata as unknown */ }
+  return {
+    review_status: row.review_status === "approved" ? "approved" as const : "pending" as const,
+    allergen_status: row.allergen_status === "ingredients_reviewed" ? "ingredients_reviewed" as const : "unknown" as const,
+    allergens,
+    source_url: typeof row.source_url === "string" ? row.source_url : null,
+    license_name: typeof row.license_name === "string" ? row.license_name : null,
+    video_url: typeof row.video_url === "string" ? row.video_url : null,
+    nutrition_source: typeof row.nutrition_source === "string" ? row.nutrition_source : null,
+    calories_kcal: typeof row.calories_kcal === "number" ? row.calories_kcal : null,
+    protein_g: typeof row.protein_g === "number" ? row.protein_g : null,
+    carbs_g: typeof row.carbs_g === "number" ? row.carbs_g : null,
+    fat_g: typeof row.fat_g === "number" ? row.fat_g : null,
+  };
+}
