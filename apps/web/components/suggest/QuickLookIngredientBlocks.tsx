@@ -58,7 +58,7 @@ export function QuickLookIngredientBlocks({
       {qtyWarn.length > 0 && (
         <section className="space-y-2">
           <h3 className="text-sm font-semibold text-amber-800">
-            Хэмжээ таарахгүй байж болно
+            Хэмжээ дутуу эсвэл тодорхойгүй
           </h3>
           {groupByCategory(qtyWarn).map(([cat, rows]) => (
             <div key={`q-${cat}`} className="space-y-2">
