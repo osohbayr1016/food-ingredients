@@ -80,6 +80,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
   const [checked, setChecked] = useState<Record<string,boolean>>({});
   const [portions, setPortions] = useState<Record<string,number>>({});
   const [titles, setTitles] = useState<Record<string,string>>({});
+  const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<RecipeListItem[] | null>(null);
   const [searchResultQuery, setSearchResultQuery] = useState("");
   const [searchHasMore, setSearchHasMore] = useState(false);
@@ -92,7 +93,6 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
   const [searchBusy, setSearchBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [day, setDay] = useState(0);
-  const [query, setQuery] = useState("");
   const [shopping, setShopping] = useState<ShoppingLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
