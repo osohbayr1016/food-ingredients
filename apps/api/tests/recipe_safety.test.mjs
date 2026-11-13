@@ -31,6 +31,8 @@ test("metadata requires proper evidence and accepts reviewed ingredients", () =>
     source_url: "https://example.org/recipe", license_name: "Original",
     allergens: ["milk"], allergen_status: "ingredients_reviewed",
     protein_g: 25, nutrition_source: "Measured ingredient database",
+    allergen_evidence_url: "https://example.org/ingredient-labels",
+    nutrition_evidence_url: "https://example.org/nutrition-report",
   }), []);
 });
 
@@ -107,4 +109,21 @@ test("pantry matcher binds ingredient parameters before filter parameters", asyn
   assert.deepEqual(preparedBinds, ["canonical-egg", "egg", 30, 2]);
   assert.match(preparedSql, /prep_time \+ r\.cook_time\) > 0/);
   assert.equal(res.length, 1);
+});
+
+test("allergy safety and nutrition need documented evidence links", () => {
+  assert.ok(validateRecipeMetadata({
+    allergen_status:"ingredients_reviewed",allergens:["milk"],
+  }).includes("metadata_requires_allergen_evidence"));
+  assert.ok(validateRecipeMetadata({
+    protein_g:25,nutrition_source:"Measured",nutrition_evidence_url:null,
+  }).includes("metadata_requires_nutrition_evidence"));
+  assert.equal(metadataFromRow({
+    review_status:"approved",allergen_status:"ingredients_reviewed",allergens_json:"[]",
+    allergen_evidence_url:null,
+  }).allergen_status,"unknown");
+  assert.equal(metadataFromRow({
+    review_status:"approved",allergen_status:"ingredients_reviewed",allergens_json:'["milk"]',
+    allergen_evidence_url:"https://example.org/check",
+  }).allergen_status,"ingredients_reviewed");
 });
