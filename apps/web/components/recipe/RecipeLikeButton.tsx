@@ -76,6 +76,12 @@ export function RecipeLikeButton({
     }
     setBusy(true);
     try {
+      if (failed) {
+        const ids = await getRecipeLibraryIds(user.id, "likes");
+        setOn(ids.has(recipeId));
+        setFailed(false);
+        return;
+      }
       const next = !on;
       const res = on
         ? await clientFetch(`/likes/${recipeId}`, { method: "DELETE" })

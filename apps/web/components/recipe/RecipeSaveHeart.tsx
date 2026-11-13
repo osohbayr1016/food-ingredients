@@ -75,6 +75,12 @@ export function RecipeSaveHeart({
     }
     setBusy(true);
     try {
+      if (failed) {
+        const ids = await getRecipeLibraryIds(user.id, "saved");
+        setSaved(ids.has(recipeId));
+        setFailed(false);
+        return; // retry the read first; do not toggle an unknown server state
+      }
       const next = !saved;
       const res = saved
         ? await clientFetch(`/saved/${recipeId}`, { method: "DELETE" })
