@@ -27,7 +27,7 @@ export async function importDailyCandidate(env: Env): Promise<string> {
       meals?: Array<{ idMeal?: string; strMeal?: string }> | null;
     };
     const id = String(json.meals?.[0]?.idMeal ?? "").trim();
-    if (!/^\\d{1,20}$/.test(id)) continue;
+    if (!/^\d{1,20}$/.test(id)) continue;
     const meal = await lookupMealById(id, key);
     if (!meal) continue;
     const patch = mealToRecipePatch(meal, { embedRemoteThumbUrlInTips: false });
@@ -51,7 +51,7 @@ export async function importDailyCandidate(env: Env): Promise<string> {
       allergens: [],
     };
     patch.recipe.tips = [patch.recipe.tips,
-      "AUTO IMPORT DRAFT: Verify attribution, media rights, timings, ingredient quantities, safety and allergens before publishing."].filter(Boolean).join("\\n");
+      "AUTO IMPORT DRAFT: Verify attribution, media rights, timings, ingredient quantities, safety and allergens before publishing."].filter(Boolean).join("\n");
     if (validateRecipePatch(patch).length) continue;
     const recipeId = crypto.randomUUID();
     await insertRecipe(env.DB, recipeId, patch);
