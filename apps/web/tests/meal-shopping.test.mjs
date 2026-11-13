@@ -39,3 +39,12 @@ test("Monday is the beginning of the planned week", () => {
   assert.equal(d.getDay(),1);
   assert.equal(d.getDate(),9);
 });
+
+test("shopping list flags stock with unknown quantity rather than implying it is absent", () => {
+  const list = aggregateMealShopping([{baseServes:1,plannedServes:1,ingredients:[
+    {ingredient_canonical_id:"rice",name:"Rice",quantity:200,unit:"г"},
+  ]}],[{canonical_id:"rice",name:"Rice",quantity:"",unit:"г"}]);
+  assert.equal(list.length,1);
+  assert.equal(list[0].quantity,200);
+  assert.equal(list[0].stockUncertain,true);
+});
