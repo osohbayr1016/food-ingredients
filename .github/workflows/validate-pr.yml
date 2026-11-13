@@ -1,0 +1,33 @@
+name: Validate pull requests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: API typecheck
+        run: pnpm --filter api exec tsc --noEmit
+      - name: API Wrangler dry-run bundle
+        run: pnpm --filter api exec wrangler deploy --dry-run
+      - name: Web typecheck
+        run: pnpm --filter web exec tsc --noEmit
+      - name: Web lint
+        run: pnpm --filter web lint
+      - name: Production frontend build
+        run: pnpm --filter web run pages:build

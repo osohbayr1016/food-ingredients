@@ -11,16 +11,14 @@ import { likes } from "./routes/likes";
 import { saved } from "./routes/saved";
 import { admin } from "./routes/admin";
 import { meNutrition } from "./routes/meNutrition";
+import { importDailyCandidate } from "./lib/dailyRecipeImport";
 
 const app = new Hono<{ Bindings: Env }>();
-
 app.use("*", corsMw);
-
 app.get("/health", async (c) => {
   await c.env.DB.prepare("SELECT 1 AS ok").first();
   return c.json({ ok: true });
 });
-
 app.route("/", recipes);
 app.route("/", cuisines);
 app.route("/", recipeTagsPublic);
@@ -32,4 +30,16 @@ app.route("/", saved);
 app.route("/", meNutrition);
 app.route("/", admin);
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(
+      importDailyCandidate(env).then((result) => {
+        console.log("daily recipe import:", result);
+      }).catch((error) => {
+        console.error("daily recipe import failed", error);
+        throw error;
+      }),
+    );
+  },
+};

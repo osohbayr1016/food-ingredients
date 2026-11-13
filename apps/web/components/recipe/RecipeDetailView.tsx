@@ -50,9 +50,9 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
       />
 
       <div className="flex items-center gap-3 text-xs text-zinc-500">
-        <span>Prep {data.recipe.prep_time} min</span>
-        <span aria-hidden>•</span>
-        <span>Cook {data.recipe.cook_time} min</span>
+        {data.recipe.prep_time > 0 && <span>Бэлтгэл {data.recipe.prep_time} мин</span>}
+        {data.recipe.prep_time > 0 && data.recipe.cook_time > 0 && <span aria-hidden>•</span>}
+        {data.recipe.cook_time > 0 && <span>Хийх {data.recipe.cook_time} мин</span>}
         <DifficultyDots value={data.recipe.difficulty} />
         <span className="inline-flex items-center gap-1" aria-hidden>
           {cuisineEmoji(data.recipe.cuisine)}
@@ -96,7 +96,7 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
       />
 
       <section className="space-y-3">
-        <h2 className="text-lg font-bold text-zinc-900">Ingredients</h2>
+        <h2 className="text-lg font-bold text-zinc-900">Орц, материал</h2>
         <IngredientGroupedList items={data.ingredients} ctx={ctx} />
       </section>
 
@@ -126,17 +126,16 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
         )}
       </section>
 
-      <Link
-        replace
+      {data.steps.length > 0 && <Link
         href={`/recipe/${data.recipe.id}/cook?serves=${serves}`}
-        className="fixed left-1/2 z-30 inline-flex min-w-[220px] -translate-x-1/2 justify-center rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg shadow-rose-300/50 touch-manipulation"
+        className="fixed left-1/2 z-30 inline-flex min-w-[220px] -translate-x-1/2 justify-center rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg shadow-[#276440]/20 touch-manipulation md:bottom-6"
         style={{
           bottom: "calc(88px + env(safe-area-inset-bottom))",
           backgroundColor: "var(--figma-primary)",
         }}
       >
-        Тогоонд эхлэх
-      </Link>
+        Алхмаар хоол хийх
+      </Link>}
     </main>
   );
 }

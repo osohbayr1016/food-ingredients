@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #111827;
-  --figma-primary: #e23e3e;
-  --figma-soft: #fff5f5;
+  --background: #fcfdf9;
+  --foreground: #21362b;
+  --figma-primary: #276440;
+  --figma-soft: #edf6e8;
 }
 
 @theme inline {
@@ -12,8 +12,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --color-figma-primary: #e23e3e;
-  --color-figma-soft: #fff5f5;
+  --color-figma-primary: #276440;
+  --color-figma-soft: #edf6e8;
 }
 
 body {
@@ -22,22 +22,8 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.input-number-no-spin {
-  -moz-appearance: textfield;
-}
-
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.input-number-no-spin { -moz-appearance: textfield; }
 .input-number-no-spin::-webkit-inner-spin-button,
-.input-number-no-spin::-webkit-outer-spin-button {
-  margin: 0;
-  appearance: none;
-  -webkit-appearance: none;
-}
+.input-number-no-spin::-webkit-outer-spin-button { margin: 0; appearance: none; }

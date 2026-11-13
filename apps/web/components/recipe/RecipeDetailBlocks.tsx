@@ -33,13 +33,13 @@ export function RecipeDetailStatRow({
 }) {
   return (
     <div className="flex gap-2">
-      <StatCard label={`${prepTime + cookTime} min`} sub="cook time">
+      <StatCard label={prepTime + cookTime > 0 ? `${prepTime + cookTime} мин` : "Тодорхойгүй"} sub="Нийт хугацаа">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
           <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
           <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       </StatCard>
-      <StatCard label={`${serves} serving${serves > 1 ? "s" : ""}`} sub="serves">
+      <StatCard label={`${serves} порц`} sub="Хүний тоо">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
           <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.8" />
           <path
@@ -50,7 +50,7 @@ export function RecipeDetailStatRow({
           />
         </svg>
       </StatCard>
-      <StatCard label={origin} sub="origin">
+      <StatCard label={origin} sub="Гарал үүсэл">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path
             d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"

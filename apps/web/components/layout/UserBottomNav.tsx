@@ -4,10 +4,10 @@ import { PantryFabButton } from "@/components/layout/PantryFabButton";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const primary = "#E23E3E";
+const primary = "#276440";
 
 function IconHome({ active }: { active: boolean }) {
-  const c = active ? primary : "#9CA3AF";
+  const c = active ? primary : "#819287";
   return (
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
@@ -21,7 +21,7 @@ function IconHome({ active }: { active: boolean }) {
 }
 
 function IconDiscover({ active }: { active: boolean }) {
-  const c = active ? primary : "#9CA3AF";
+  const c = active ? primary : "#819287";
   return (
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
       <circle cx="12" cy="12" r="9" stroke={c} strokeWidth="1.8" />
@@ -36,7 +36,7 @@ function IconDiscover({ active }: { active: boolean }) {
 }
 
 function IconBook({ active }: { active: boolean }) {
-  const c = active ? primary : "#9CA3AF";
+  const c = active ? primary : "#819287";
   return (
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
@@ -51,7 +51,7 @@ function IconBook({ active }: { active: boolean }) {
 }
 
 function IconUser({ active }: { active: boolean }) {
-  const c = active ? primary : "#9CA3AF";
+  const c = active ? primary : "#819287";
   return (
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
       <circle cx="12" cy="8" r="3.5" stroke={c} strokeWidth="1.8" />
@@ -77,13 +77,15 @@ export function UserBottomNav() {
       <div className="max-w-xl mx-auto px-2 pt-1">
         <div className="relative flex items-end justify-between gap-0 min-h-[60px] pb-2">
           <Link
+            aria-current={here("/") ? "page" : undefined}
             href="/"
             className="flex flex-1 flex-col items-center gap-1 pt-1.5 text-[11px] font-medium touch-manipulation text-zinc-500"
           >
             <IconHome active={here("/")} />
-            <span style={{ color: here("/") ? primary : undefined }}>Home</span>
+            <span style={{ color: here("/") ? primary : undefined }}>Нүүр</span>
           </Link>
           <Link
+            aria-current={here("/discover") ? "page" : undefined}
             href="/discover"
             className="flex flex-1 flex-col items-center gap-1 pt-1.5 text-[11px] font-medium touch-manipulation text-zinc-500"
           >
@@ -102,13 +104,15 @@ export function UserBottomNav() {
             </span>
           </div>
           <Link
+            aria-current={here("/saved") ? "page" : undefined}
             href="/saved"
             className="flex flex-1 flex-col items-center gap-1 pt-1.5 text-[11px] font-medium touch-manipulation text-zinc-500"
           >
             <IconBook active={here("/saved")} />
-            <span style={{ color: here("/saved") ? primary : undefined }}>Saved</span>
+            <span style={{ color: here("/saved") ? primary : undefined }}>Хадгалсан</span>
           </Link>
           <Link
+            aria-current={here("/profile") || here("/login") ? "page" : undefined}
             href="/profile"
             className="flex flex-1 flex-col items-center gap-1 pt-1.5 text-[11px] font-medium touch-manipulation text-zinc-500"
           >
