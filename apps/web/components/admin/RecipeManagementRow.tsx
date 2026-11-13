@@ -27,6 +27,10 @@ export function RecipeManagementRow({
           >
             {r.is_published ? "Нийтэлсэн" : "Ноорог"}
           </span>
+          <span className={r.review_status === "approved" ? "rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-800" : "rounded-full bg-amber-50 px-2 py-0.5 text-amber-800"}>
+            {r.review_status === "approved" ? "Хянасан" : "Шалгаагүй"}
+          </span>
+          {!r.license_name && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-rose-800">Ашиглах эрх дутуу</span>}
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -36,14 +40,10 @@ export function RecipeManagementRow({
         >
           Засах
         </Link>
-        <Link
+        {r.is_published ? <Link
           href={`/recipe/${r.id}`}
-          className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-red-600 hover:bg-zinc-50"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Нээх
-        </Link>
+          className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-[#276440] hover:bg-zinc-50"
+          target="_blank" rel="noreferrer">Нээх</Link> : null}
         <button
           type="button"
           onClick={onDeleteClick}
