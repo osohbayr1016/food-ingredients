@@ -31,6 +31,7 @@ export function useSuggestPantryUrl() {
 
   const [busy, setBusy] = useState(false);
   const [rows, setRows] = useState<SuggestResultRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const resultsSigRef = useRef<string | null>(null);
 
   const replaceQuery = useCallback(
@@ -108,16 +109,22 @@ export function useSuggestPantryUrl() {
     setRows,
     resultsSigRef,
     setBusy,
+    setError,
   );
 
   async function suggest() {
     if (!pantry.length) return;
     setBusy(true);
+    setError(null);
     try {
       const list = await postSuggestPantryResults(pantry, filters);
       setRows(list);
       resultsSigRef.current = suggestStateSig(pantry, filters);
       replaceQuery(pantry, filters, true);
+    } catch {
+      setError("Жорын санг ачаалж чадсангүй. Холболтоо шалгаад дахин оролдоорой.");
+      setRows([]);
+      resultsSigRef.current = null;
     } finally {
       setBusy(false);
     }
@@ -130,6 +137,7 @@ export function useSuggestPantryUrl() {
     resultsSigRef,
     setRows,
     setBusy,
+    setError,
   );
 
   return {
@@ -137,6 +145,7 @@ export function useSuggestPantryUrl() {
     filters,
     busy,
     rows,
+    error,
     addPick,
     addMultiplePicks,
     addPicksAndSuggest,

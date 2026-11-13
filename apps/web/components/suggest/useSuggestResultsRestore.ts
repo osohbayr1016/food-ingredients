@@ -19,6 +19,7 @@ export function useSuggestResultsRestore(
   resultsSigRef: MutableRefObject<string | null>,
   setRows: (rows: SuggestResultRow[]) => void,
   setBusy: (b: boolean) => void,
+  setError: (e: string | null) => void,
 ) {
   useEffect(() => {
     if (!shouldRestoreResults(searchParams)) return;
@@ -38,8 +39,10 @@ export function useSuggestResultsRestore(
           signal: ac.signal,
         });
         if (ac.signal.aborted) return;
+        if (!res.ok) throw new Error("suggest_failed");
         const data = (await res.json()) as { results: SuggestResultRow[] };
         setRows(data.results ?? []);
+        setError(null);
         resultsSigRef.current = sig;
       } catch (e: unknown) {
         if (
@@ -48,11 +51,12 @@ export function useSuggestResultsRestore(
         ) {
           return;
         }
-        throw e;
+        setRows([]);
+        setError("Санал болгосон жоруудыг сэргээж чадсангүй. Дахин оролдоорой.");
       } finally {
         if (!ac.signal.aborted) setBusy(false);
       }
     })();
     return () => ac.abort();
-  }, [searchParams, pantry, filters, resultsSigRef, setRows, setBusy]);
+  }, [searchParams, pantry, filters, resultsSigRef, setRows, setBusy, setError]);
 }

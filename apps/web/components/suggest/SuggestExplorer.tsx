@@ -9,6 +9,7 @@ import { SuggestResults } from "@/components/suggest/SuggestResults";
 import type { SuggestSortKey } from "@/components/suggest/suggestTypes";
 import { useSuggestPantryUrl } from "@/components/suggest/useSuggestPantryUrl";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 
 export function SuggestExplorer() {
   const {
@@ -16,6 +17,7 @@ export function SuggestExplorer() {
     filters,
     busy,
     rows,
+    error,
     addPick,
     addMultiplePicks,
     addPicksAndSuggest,
@@ -34,13 +36,14 @@ export function SuggestExplorer() {
     <div className="space-y-4 py-5">
       <header className="space-y-1">
         <p className="text-xs font-semibold uppercase tracking-wide text-(--figma-primary)">
-          Гар дээрх материал — Pantry match
+          Миний хөргөгч — жор тааруулах
         </p>
         <h1 className="text-2xl font-bold text-zinc-900">Тохирох жор олох</h1>
         <p className="text-sm text-zinc-500">
           Байгаа орцоо бичиж сонгоод “Жор санал болгох” дээр дараарай. Хэмжээ болон шүүлтүүрийг хүсвэл нэмж тохируулж болно.
         </p>
       </header>
+      <Link href="/pantry" className="inline-flex rounded-xl border border-[#d6e6d2] px-4 py-2 text-sm font-semibold text-[#276440]">Миний хадгалсан орцыг нээх →</Link>
       <SuggestPantryPicker onPick={addPick} existingIds={existingIds} />
       {pantry.length > 0 ? (
         <div className="space-y-2">
@@ -69,6 +72,7 @@ export function SuggestExplorer() {
       >
         {busy ? "Тооцоолж байна…" : "Жор санал болгох"}
       </button>
+      {error && <p role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{error}</p>}
       <SuggestResults rows={rows} sortKey={sortKey} />
       <details className="rounded-2xl border border-[#d9e6d7] bg-white p-4">
         <summary className="cursor-pointer text-sm font-semibold text-[#276440]">Нарийвчилсан шүүлтүүр</summary>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { SuggestPantryPicker } from "@/components/suggest/SuggestPantryPicker";
+import { SuggestPantryScanPanel } from "@/components/suggest/SuggestPantryScanPanel";
 import { buildSuggestQueryString } from "@/lib/suggestQuery";
 import {
   PANTRY_STORAGE_KEY, expiryStatus, normalizePantry, parsePantryStorage,
@@ -64,6 +65,20 @@ export function PantryInventory() {
           }}
         />
         <p className="mt-3 text-xs text-zinc-500">Тоо хэмжээ, нэгж, хэрэглэх огноог хүсвэл бөглөөрэй. Орц тааруулахад тодорхойгүй хэмжээг зохиомлоор тооцохгүй.</p>
+        <details className="mt-5 rounded-2xl border border-[#e2eae0] bg-[#f7faf5] p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-[#276440]">Зургаар орц нэмэх (туршилтын)</summary>
+          <div className="mt-3">
+            <SuggestPantryScanPanel existingIds={ids} onAddPicks={rows =>
+              setItems(previous => {
+                const seen = new Set(previous.map(item => item.canonical_id));
+                const additions = rows.filter(row => !seen.has(row.canonical_id)).map(row => ({
+                  ...row, quantity: "", unit: "", expires_on: "",
+                }));
+                return [...previous, ...additions].slice(0, 100);
+              })
+            } />
+          </div>
+        </details>
       </section>
 
       {(expiring > 0 || expired > 0) && (
