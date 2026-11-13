@@ -7,6 +7,7 @@ test("mass and volume conversion never assumes density", () => {
   assert.equal(convertQuantity(2,"tbsp","мл"),30);
   assert.equal(convertQuantity(1,"л","г"),null);
   assert.equal(convertQuantity(1,"аяга","мл"),null);
+  assert.equal(convertQuantity(1,"",""),null);
 });
 test("shopping list accounts for portions and pantry stock once", () => {
   const dishes = [
