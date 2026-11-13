@@ -32,8 +32,10 @@ export default async function HomePage({
     const value = getParam(params, key);
     if (value) query.set(key, value);
   }
+  const currentPage = Math.min(1000, Math.max(1, Number(getParam(params, "page") || 1) || 1));
+  if (currentPage > 1) query.set("page", String(currentPage));
   const suffix = query.toString();
-  const { recipes } = await serverGetJson<{ recipes: RecipeListItem[] }>(
+  const { recipes, pagination } = await serverGetJson<{ recipes: RecipeListItem[]; pagination?: { has_more: boolean } }>(
     suffix ? `/recipes?${suffix}` : "/recipes",
   );
   const filtered = suffix.length > 0;
@@ -119,6 +121,13 @@ export default async function HomePage({
             <Link href="/" className="mt-4 inline-block text-sm font-bold text-[#276440] underline">Шүүлтүүр арилгах</Link>
           </div>
         )}
+        <nav aria-label="Жорын хуудас" className="flex items-center justify-center gap-4 text-sm font-semibold">
+          {currentPage > 1 && <Link href={`/?${new URLSearchParams({ ...Object.fromEntries(query.entries()), page: String(currentPage - 1) })}`}
+            className="rounded-xl border border-[#dce7d9] px-5 py-3 text-[#28613e]">← Өмнөх</Link>}
+          <span className="text-zinc-500">{currentPage}-р хуудас</span>
+          {pagination?.has_more && <Link href={`/?${new URLSearchParams({ ...Object.fromEntries(query.entries()), page: String(currentPage + 1) })}`}
+            className="rounded-xl bg-[#28613e] px-5 py-3 text-white">Дараагийн →</Link>}
+        </nav>
         <details className="rounded-2xl border border-[#dfe8db] bg-white px-5 py-4">
           <summary className="cursor-pointer text-sm font-bold text-[#254a34]">Илүү нарийн шүүх</summary>
           <div className="pt-4"><Suspense fallback={<p>Шүүлтүүр ачаалж байна…</p>}><RecipeFilters /></Suspense></div>

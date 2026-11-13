@@ -32,6 +32,12 @@ recipes.get("/recipes", async (c) => {
   const maxCook = c.req.query("max_cook_time");
   const tag = c.req.query("tag");
   const query = c.req.query("q")?.trim().toLowerCase().slice(0, 100);
+  const page = Number(c.req.query("page") || 1);
+  const pageSize = Number(c.req.query("page_size") || 36);
+  if (!Number.isSafeInteger(page) || page < 1 || page > 1000 ||
+      !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100) {
+    return c.json({ error: "invalid_pagination" }, 400);
+  }
   const excludedRaw = c.req.query("exclude_allergens")?.trim();
   const excluded = excludedRaw ? [...new Set(excludedRaw.split(",").filter(Boolean))] : [];
   if (excluded.some(code => !ALLERGEN_CODES.includes(code as typeof ALLERGEN_CODES[number]))) return c.json({ error: "invalid_allergen" }, 400);
@@ -90,10 +96,13 @@ recipes.get("/recipes", async (c) => {
              JOIN tags tg ON tg.id = rt.tag_id AND tg.name = ?`;
     params.unshift(tag);
   }
-  sql += ` WHERE ${where.join(" AND ")} ORDER BY r.created_at DESC`;
-  const stmt = c.env.DB.prepare(sql).bind(...params);
+  sql += ` WHERE ${where.join(" AND ")} ORDER BY r.created_at DESC, r.id ASC LIMIT ? OFFSET ?`;
+  const stmt = c.env.DB.prepare(sql).bind(...params, pageSize + 1, (page - 1) * pageSize);
   const { results } = await stmt.all();
-  return c.json({ recipes: results ?? [] });
+  const rows = results ?? [];
+  return c.json({ recipes: rows.slice(0, pageSize), pagination: {
+    page, page_size: pageSize, has_more: rows.length > pageSize,
+  } });
 });
 
 recipes.get("/recipes/:id", async (c) => {
