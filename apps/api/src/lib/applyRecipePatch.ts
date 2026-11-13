@@ -135,6 +135,11 @@ export async function applyRecipePatch(
   stmts.push(db.prepare(`DELETE FROM steps WHERE recipe_id = ?`).bind(recipeId));
   stmts.push(...childStatements(db, recipeId, enriched));
   if (enriched.metadata) stmts.push(metadataUpsert(db, recipeId, enriched.metadata));
+  // Edits invalidate an earlier approval-to-publish queue entry.
+  // The reviewer must explicitly queue the updated version again.
+  stmts.push(db.prepare(
+    "DELETE FROM recipe_publication_queue WHERE recipe_id=? AND status='queued'"
+  ).bind(recipeId));
 
   await db.batch(stmts);
 }
