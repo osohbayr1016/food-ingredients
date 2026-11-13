@@ -3,6 +3,7 @@
 import type { AuthUser } from "@/components/auth/AuthContext";
 import Link from "next/link";
 import { ProfileNutritionAccount } from "@/components/profile/ProfileNutritionAccount";
+import { GuestFavoritesTransfer } from "@/components/profile/GuestFavoritesTransfer";
 import { AccountDataControls } from "@/components/profile/AccountDataControls";
 import { RecipeGrid } from "@/components/recipe/RecipeGrid";
 import type { RecipeListItem } from "@/lib/types";
@@ -58,6 +59,7 @@ export function ProfileLibrarySection({
         </div>
       </header>
 
+      <GuestFavoritesTransfer />
       <div className="flex divide-x divide-zinc-100 rounded-2xl border border-zinc-100 bg-zinc-50/80 py-4 text-center text-sm">
         <div className="flex flex-1 flex-col gap-0.5 px-2">
           <span className="text-lg font-bold text-zinc-900">{saved.length}</span>
