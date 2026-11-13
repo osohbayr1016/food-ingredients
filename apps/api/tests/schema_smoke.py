@@ -4,7 +4,7 @@ import sqlite3
 root = pathlib.Path(__file__).resolve().parents[3]
 db = sqlite3.connect(":memory:")
 db.executescript((root / "apps/api/db/schema.sql").read_text())
-for file in ("0007_recipe_metadata.sql", "0008_auth_rate_limits.sql", "0009_recipe_search_indexes.sql", "0010_publication_queue.sql", "0011_unicode_recipe_search.sql", "0012_publication_days.sql", "0013_editorial_audit.sql", "0014_ingredient_unicode_fts.sql", "0015_user_pantry_snapshots.sql", "0016_session_revocation.sql"):
+for file in ("0007_recipe_metadata.sql", "0008_auth_rate_limits.sql", "0009_recipe_search_indexes.sql", "0010_publication_queue.sql", "0011_unicode_recipe_search.sql", "0012_publication_days.sql", "0013_editorial_audit.sql", "0014_ingredient_unicode_fts.sql", "0015_user_pantry_snapshots.sql", "0016_session_revocation.sql", "0017_recipe_evidence.sql"):
     content = (root / "apps/api/db" / file).read_text()
     db.executescript(content)
     db.executescript(content)  # must be safe to retry
@@ -59,4 +59,8 @@ assert db.execute("SELECT version FROM user_session_versions WHERE user_id='user
 db.execute("DELETE FROM users WHERE id='user-sync'")
 assert not db.execute("SELECT 1 FROM user_pantry_snapshots WHERE user_id='user-sync'").fetchone()
 assert not db.execute("SELECT 1 FROM user_session_versions WHERE user_id='user-sync'").fetchone()
+db.execute("INSERT INTO recipe_evidence(recipe_id,allergen_evidence_url) VALUES('t','https://example.org/ingredient-labels')")
+assert db.execute("SELECT allergen_evidence_url FROM recipe_evidence WHERE recipe_id='t'").fetchone()[0]=='https://example.org/ingredient-labels'
+db.execute("DELETE FROM recipes WHERE id='t'")
+assert not db.execute("SELECT 1 FROM recipe_evidence WHERE recipe_id='t'").fetchone()
 print("D1-compatible schema & migrations: smoke test passed")
