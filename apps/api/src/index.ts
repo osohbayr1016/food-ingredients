@@ -27,6 +27,8 @@ app.get("/health/ready", async (c) => {
     await c.env.DB.prepare("SELECT 1 FROM recipe_metadata LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM auth_rate_limits LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM recipe_publication_queue LIMIT 1").all();
+    await c.env.DB.prepare("SELECT 1 FROM recipe_review_events LIMIT 1").all();
+    await c.env.DB.prepare("SELECT 1 FROM recipe_publication_dates LIMIT 1").all();
     return c.json({ ok: true, database: "ready" });
   } catch (error) {
     console.error("health/ready", error);

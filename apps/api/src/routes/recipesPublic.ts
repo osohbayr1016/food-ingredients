@@ -71,13 +71,13 @@ recipes.get("/recipes", async (c) => {
     }
   }
 
-  let sql = "SELECT DISTINCT r.* FROM recipes r";
+  let sql = "SELECT DISTINCT r.* FROM recipes r LEFT JOIN recipe_publication_dates pub ON pub.recipe_id=r.id";
   if (tag) {
     sql += ` JOIN recipe_tags rt ON rt.recipe_id = r.id
              JOIN tags tg ON tg.id = rt.tag_id AND tg.name = ?`;
     params.unshift(tag);
   }
-  sql += ` WHERE ${where.join(" AND ")} ORDER BY r.created_at DESC, r.id ASC LIMIT ? OFFSET ?`;
+  sql += ` WHERE ${where.join(" AND ")} ORDER BY COALESCE(pub.published_at,r.created_at) DESC, r.id ASC LIMIT ? OFFSET ?`;
   const stmt = c.env.DB.prepare(sql).bind(...params, pageSize + 1, (page - 1) * pageSize);
   const { results } = await stmt.all();
   const rows = results ?? [];

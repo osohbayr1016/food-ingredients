@@ -16,7 +16,7 @@ function fixture({ enabled = "true", candidate = {id:"recipe-1"}, status = "publ
         first: async () => candidate,
       };
     },
-    batch: async (statements) => {batches++; assert.equal(statements.length,4);return [];},
+    batch: async (statements) => {batches++; assert.equal(statements.length,5);return [];},
   };
   return { env:{AUTO_DAILY_PUBLISH:enabled,DB:db},queries,getBatches:()=>batches };
 }
