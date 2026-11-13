@@ -43,6 +43,8 @@ jobs:
         run: node --experimental-strip-types --test apps/api/tests/auth-limits.test.mjs
       - name: Cross-origin allowlist validation tests
         run: node --experimental-strip-types --test apps/api/tests/cors-policy.test.mjs
+      - name: Private local-data export allowlist tests
+        run: node --experimental-strip-types --test apps/web/tests/browser-data-export.test.mjs
       - name: Safe auth inputs and login redirects
         run: |
           node --experimental-strip-types --test apps/api/tests/auth-input.test.mjs
