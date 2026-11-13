@@ -62,6 +62,13 @@ export function RecipeMetadataEditor({
             <option value="ingredients_reviewed">Орцын жагсаалтыг хүн шалгасан</option>
           </select>
         </label>
+        <label className="block text-sm">Орцын харшлын шалгалтын эх сурвалж (HTTPS)
+          <input type="url" value={value.allergen_evidence_url ?? ""}
+            placeholder="https://.../ingredient-or-label-evidence"
+            onChange={e=>patch({allergen_evidence_url:e.target.value||null,allergen_status:"unknown"})}
+            className="mt-1 min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2"/>
+          <span className="mt-1 block text-xs text-[#7a7462]">Эх сурвалжгүй бол “орц шалгасан” төлөв сонгосон ч баталгаажуулж болохгүй.</span>
+        </label>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {ALLERGEN_OPTIONS.map(([code,label]) => (
             <label key={code} className="flex min-h-10 items-center gap-2 rounded-lg bg-white px-2 py-2 text-xs">
@@ -88,12 +95,25 @@ export function RecipeMetadataEditor({
           {nutritionField("carbs_g", "Нүүрс ус · г")}
           {nutritionField("fat_g", "Өөх тос · г")}
         </div>
+        <label className="block text-sm">Шим тэжээлийн тооцооны баримтын холбоос (HTTPS)
+          <input type="url" value={value.nutrition_evidence_url??""}
+            placeholder="https://.../nutrition-data"
+            onChange={e=>patch({nutrition_evidence_url:e.target.value||null})}
+            className="mt-1 min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2"/>
+          <span className="mt-1 block text-xs text-[#7a7462]">Баримтын холбоосгүй тооцоолол хэрэглэгчид баталгаажсан мэт харагдахгүй.</span>
+        </label>
         <label className="block text-sm">Шим тэжээлийн эх сурвалж, тооцооны тайлбар
           <input value={value.nutrition_source ?? ""} maxLength={300}
             onChange={e => patch({ nutrition_source: e.target.value || null })}
             className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2" />
         </label>
       </div>
+      <label className="block text-sm font-semibold text-zinc-700">Хяналтын тэмдэглэл (сонголтоор)
+        <textarea maxLength={2000} value={value.review_notes??""}
+          onChange={e=>patch({review_notes:e.target.value||null})}
+          placeholder="Шалгасан эх сурвалж, порцын тооцоолол, онцгой анхааруулга…"
+          className="mt-1 min-h-24 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-normal"/>
+      </label>
     </section>
   );
 }
