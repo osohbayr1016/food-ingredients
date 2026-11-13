@@ -99,8 +99,8 @@ export function CookingExperience({
     });
   }, [pulse, remaining, timers]);
 
-  function restartCooking() {
-    if (timers.length && !window.confirm("Ажиллаж буй таймеруудыг зогсоож шинээр эхлэх үү?")) return;
+  function restartCooking(force = false) {
+    if (!force && timers.length && !window.confirm("Ажиллаж буй таймеруудыг зогсоож шинээр эхлэх үү?")) return;
     try {
       localStorage.removeItem(sessionKey);
       const prefix = `ing_ck_v2:${data.recipe.id}:${serves}:`;
@@ -128,7 +128,7 @@ export function CookingExperience({
       >
         ← Буцах
       </Link>
-      <button type="button" onClick={restartCooking}
+      <button type="button" onClick={() => restartCooking()}
         className="fixed right-4 top-[calc(env(safe-area-inset-top)+12px)] z-50 rounded-full border border-white/25 bg-zinc-900/90 px-3 py-2 text-xs font-semibold text-white"
         aria-label="Хоол хийхийг шинээр эхлүүлэх">Шинээр эхлэх</button>
       <CookingSlideDeck
@@ -165,7 +165,7 @@ export function CookingExperience({
         open={finish}
         recipeId={data.recipe.id}
         onClose={() => setFinish(false)}
-        onSaved={restartCooking}
+        onSaved={() => restartCooking(true)}
       />
     </div>
   );
