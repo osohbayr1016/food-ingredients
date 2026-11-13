@@ -25,6 +25,8 @@ jobs:
         run: python3 apps/api/tests/schema_smoke.py
       - name: Pure API unit tests
         run: node --experimental-strip-types --test apps/api/tests/recipe_safety.test.mjs
+      - name: Pantry inventory unit tests
+        run: node --experimental-strip-types --test apps/web/tests/pantry-inventory.test.mjs
       - name: API typecheck
         run: pnpm --filter api exec tsc --noEmit
       - name: API Wrangler dry-run bundle
