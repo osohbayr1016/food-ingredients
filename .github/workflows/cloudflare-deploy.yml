@@ -47,6 +47,15 @@ jobs:
             exit 1
           fi
 
+      - name: Apply additive D1 recipe metadata migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0007_recipe_metadata.sql --yes
+
       - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v3
         with:
