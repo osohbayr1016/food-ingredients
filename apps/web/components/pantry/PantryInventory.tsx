@@ -30,7 +30,8 @@ export function PantryInventory() {
   const usable = useMemo(() => usablePantry(items, today), [items, today]);
   const expired = useMemo(() => items.filter(x => expiryStatus(x.expires_on, today) === "expired").length, [items, today]);
   const expiring = useMemo(() => items.filter(x => expiryStatus(x.expires_on, today) === "soon").length, [items, today]);
-  const href = "/suggest" + buildSuggestQueryString(usable.map(x => ({
+  const matchingItems = usable.slice(0, 30);
+  const href = "/suggest" + buildSuggestQueryString(matchingItems.map(x => ({
     canonical_id: x.canonical_id, name: x.name, quantity: x.quantity, unit: x.unit,
   })), true, {});
 
@@ -122,9 +123,10 @@ export function PantryInventory() {
       </section>
 
       <div className="sticky bottom-[calc(80px+env(safe-area-inset-bottom))] z-20 rounded-2xl border border-[#d8e7d5] bg-white/95 p-3 shadow-lg backdrop-blur-sm md:bottom-5">
-        {usable.length ? (
+        {usable.length > 30 && <p className="mb-2 text-center text-xs text-amber-800">Одоохондоо эхний 30 орцоор жор тааруулна. Бусад орц хадгалагдсан хэвээр байна.</p>}
+        {matchingItems.length ? (
           <Link href={href} className="flex min-h-12 items-center justify-center rounded-xl bg-[#286543] px-6 text-center text-sm font-bold text-white hover:bg-[#1e5136]">
-            {usable.length} орцоор хоол санал болгох →
+            {matchingItems.length} орцоор хоол санал болгох →
           </Link>
         ) : (
           <p className="py-3 text-center text-sm text-zinc-600">Хэрэглэх боломжтой орц нэмбэл жор санал болгоно.</p>
