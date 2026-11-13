@@ -19,11 +19,15 @@ const LEGACY_PLAN_KEY = "food-ingredients-week-plan-v1";
 
 export function MealPlanner({ recipes }: { recipes: RecipeListItem[] }) {
   const [offset, setOffset] = useState(0);
+  const [localToday, setLocalToday] = useState<Date | null>(null);
+  useEffect(() => { setLocalToday(new Date()); }, []);
   const monday = useMemo(() => {
-    const d = mondayOfWeek(new Date());
+    if (!localToday) return null;
+    const d = mondayOfWeek(localToday);
     d.setDate(d.getDate() + offset * 7);
     return d;
-  }, [offset]);
+  }, [offset, localToday]);
+  if (!monday) return <p role="status" className="mx-auto max-w-5xl py-8 text-sm text-zinc-600">7 хоногийн төлөвлөгөө ачаалж байна…</p>;
   const weekStart = todayLocalIso(monday);
   const friday = new Date(monday);
   friday.setDate(friday.getDate() + 6);
