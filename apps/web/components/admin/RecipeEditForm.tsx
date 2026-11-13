@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { RecipeMetaFields } from "@/components/admin/RecipeMetaFields";
+import { RecipeMetadataEditor } from "@/components/admin/RecipeMetadataEditor";
 import { RecipeIngredientsEditor } from "@/components/admin/RecipeIngredientsEditor";
 import { RecipeStepsEditor } from "@/components/admin/RecipeStepsEditor";
 import { RecipeTagsPicker } from "@/components/admin/RecipeTagsPicker";
@@ -71,7 +72,8 @@ export function RecipeEditForm({ recipeId }: Props) {
     try {
       const res = await patchAdminRecipe(adminSecret, recipeId, payload);
       if (!res.ok) {
-        setErr("Хадгалахад алдаа гарлаа.");
+        const data = await res.json().catch(() => ({})) as { details?: string[] };
+        setErr(data.details?.length ? "Шалгалт: " + data.details.join(", ") : "Хадгалахад алдаа гарлаа.");
         return;
       }
       setSavedMsg("Хадгалагдлаа.");
@@ -109,6 +111,10 @@ export function RecipeEditForm({ recipeId }: Props) {
       <RecipeMetaFields
         recipe={payload.recipe}
         onChange={(recipe) => setPayload({ ...payload, recipe })}
+      />
+      <RecipeMetadataEditor
+        value={payload.metadata ?? {}}
+        onChange={(metadata) => setPayload({ ...payload, metadata })}
       />
       <RecipeIngredientsEditor
         ingredients={payload.ingredients}

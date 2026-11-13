@@ -15,7 +15,6 @@ export function TheMealDbImportPreviewCard({
   dedupe,
   busy,
   onDraft,
-  onPublish,
 }: Props) {
   const blocked = dedupe?.conflict === "external";
   return (
@@ -54,14 +53,7 @@ export function TheMealDbImportPreviewCard({
         >
           Ноорогоор нэмэх
         </button>
-        <button
-          type="button"
-          disabled={busy || blocked}
-          onClick={onPublish}
-          className="rounded-xl bg-[#E23E3E] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          Нийтлэх
-        </button>
+        <p className="self-center text-xs text-amber-800">Импорт эхлээд ноорог болно. Эрх, хугацаа, орц, заавраа шалгаж админ хэсгээс нийтэлнэ.</p>
       </div>
     </div>
   );
