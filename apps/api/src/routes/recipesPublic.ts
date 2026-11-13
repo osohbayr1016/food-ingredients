@@ -66,14 +66,14 @@ recipes.get("/recipes", async (c) => {
   if (excluded.length) {
     const placeholders = excluded.map(() => "?").join(",");
     where.push(`EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id
-      AND m.allergen_status='ingredients_reviewed'
+      AND m.review_status='approved' AND m.allergen_status='ingredients_reviewed'
       AND NOT EXISTS (SELECT 1 FROM json_each(m.allergens_json) a WHERE a.value IN (${placeholders})))`);
     params.push(...excluded);
   }
   if (maxKcalRaw) {
     const maxKcal = Number(maxKcalRaw);
     if (!Number.isFinite(maxKcal) || maxKcal <= 0 || maxKcal > 10000) return c.json({ error: "invalid_max_calories" }, 400);
-    where.push("EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id AND m.nutrition_source IS NOT NULL AND m.calories_kcal <= ?)");
+    where.push("EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id AND m.review_status='approved' AND m.nutrition_source IS NOT NULL AND m.calories_kcal <= ?)");
     params.push(maxKcal);
   }
   if (minProteinRaw) {
