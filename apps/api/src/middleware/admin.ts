@@ -1,6 +1,6 @@
 import { createMiddleware } from "hono/factory";
 import type { Env } from "../bindings";
-import { verifyJwt } from "../lib/jwtHs256";
+import { bearerPayload } from "../lib/authBearer";
 
 export const adminMw = createMiddleware<{ Bindings: Env }>(async (c, next) => {
   const hdr = c.req.header("Authorization");
@@ -10,7 +10,7 @@ export const adminMw = createMiddleware<{ Bindings: Env }>(async (c, next) => {
     await next();
     return;
   }
-  const payload = await verifyJwt(token, c.env.JWT_SECRET);
+  const payload = await bearerPayload(c);
   if (payload?.role === "admin") {
     await next();
     return;

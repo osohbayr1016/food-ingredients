@@ -3,6 +3,7 @@
 import type { AuthUser } from "@/components/auth/AuthContext";
 import Link from "next/link";
 import { ProfileNutritionAccount } from "@/components/profile/ProfileNutritionAccount";
+import { AccountDataControls } from "@/components/profile/AccountDataControls";
 import { RecipeGrid } from "@/components/recipe/RecipeGrid";
 import type { RecipeListItem } from "@/lib/types";
 
@@ -111,6 +112,7 @@ export function ProfileLibrarySection({
       <Link href="/saved" className="block rounded-2xl border border-[#dfe9da] bg-[#f8fbf6] px-4 py-3 text-center text-sm font-semibold text-[#276440]">
         Хоол хийсэн түүхээ үзэх
       </Link>
+      <AccountDataControls username={user.username} />
       {user.role === "admin" ? (
         <Link
           href="/admin"

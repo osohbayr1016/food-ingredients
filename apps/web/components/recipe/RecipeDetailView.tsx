@@ -19,7 +19,7 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
   const meta = data.metadata;
   const reviewed = meta?.review_status === "approved";
   const videoEmbed = reviewed ? embedVideoUrl(meta?.video_url) : null;
-  const nutritionAvailable = Boolean(reviewed && meta?.nutrition_source && [meta?.calories_kcal, meta?.protein_g, meta?.carbs_g, meta?.fat_g].some(v => v != null));
+  const nutritionAvailable = Boolean(reviewed && meta?.nutrition_source && meta?.nutrition_evidence_url && [meta?.calories_kcal, meta?.protein_g, meta?.carbs_g, meta?.fat_g].some(v => v != null));
   const allergens = (meta?.allergens ?? []).map(code => ALLERGEN_OPTIONS.find(([id]) => id === code)?.[1] ?? code);
   const base = Math.max(1, Number(data.recipe.serves) || 1);
   const [serves, setServes] = useState(base);
@@ -62,6 +62,8 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
             <>
               <p className="mt-1">{allergens.length ? `Жорын орцонд: ${allergens.join(", ")}` : "Шалгасан орцын жагсаалтад 9 гол харшил үүсгэгч тэмдэглэгдээгүй."}</p>
               <p className="mt-2 text-xs">Орцын жагсаалтын шалгалт нь харшилгүй гэсэн баталгаа биш. Шошго, солих орц, гал тогооны бохирдлыг шалгаарай.</p>
+              {meta?.allergen_evidence_url && <a href={meta.allergen_evidence_url} target="_blank" rel="noopener noreferrer"
+                className="mt-2 inline-block text-xs font-semibold underline">Орцын эх сурвалж үзэх</a>}
             </>
           ) : (
             <p className="mt-1">Энэ жорын харшил үүсгэгч орцууд хараахан баталгаажаагүй. Харшилтай бол шууд аюулгүй гэж үзэж болохгүй.</p>
@@ -77,7 +79,11 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
                 ) : null
               ))}
             </dl>
-            <p className="mt-3 text-xs text-zinc-600">Эх сурвалж: {meta?.nutrition_source}. Тэжээллэг чанар нь орц, брэнд, хоол хийх аргаар өөрчлөгдөж болно.</p>
+            <p className="mt-3 text-xs text-zinc-600">
+              Эх сурвалж: {meta?.nutrition_source}. Тооцоо нь орц, брэнд, хоол хийх аргаар өөрчлөгдөнө.
+              <a href={meta?.nutrition_evidence_url || "#"} target="_blank" rel="noopener noreferrer"
+                className="ml-1 font-semibold text-[#276440] underline">Баримтын холбоос</a>
+            </p>
           </div>
         )}
         {meta?.source_url && (

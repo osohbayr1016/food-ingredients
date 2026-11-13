@@ -66,6 +66,11 @@ export function ProfileNutritionAccount() {
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    const handler=()=>{void load();};
+    window.addEventListener("food-nutrition-changed",handler);
+    return ()=>window.removeEventListener("food-nutrition-changed",handler);
+  },[load]);
 
   const save = useCallback(async () => {
     if (validateBodyStats(value)) {

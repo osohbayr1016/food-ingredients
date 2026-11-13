@@ -117,6 +117,33 @@ jobs:
           packageManager: pnpm
           command: d1 execute food-ingredients --remote --file=db/0014_ingredient_unicode_fts.sql --yes
 
+      - name: Apply additive account pantry snapshot migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0015_user_pantry_snapshots.sql --yes
+
+      - name: Apply user session revocation migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0016_session_revocation.sql --yes
+
+      - name: Apply recipe provenance evidence migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0017_recipe_evidence.sql --yes
+
       - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v3
         with:

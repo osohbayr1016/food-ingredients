@@ -160,7 +160,9 @@ recipesAdmin.get("/recipes/:id", async (c) => {
   const tag_ids = tag_rows
     .map((t) => String((t as { id?: string }).id ?? ""))
     .filter(Boolean);
-  const rawMetadata = await c.env.DB.prepare("SELECT * FROM recipe_metadata WHERE recipe_id = ?").bind(id).first<Record<string, unknown>>();
+  const rawMetadata = await c.env.DB.prepare(`SELECT m.*,ev.allergen_evidence_url,
+    ev.nutrition_evidence_url,ev.review_notes FROM recipe_metadata m
+    LEFT JOIN recipe_evidence ev ON ev.recipe_id=m.recipe_id WHERE m.recipe_id=?`).bind(id).first<Record<string, unknown>>();
   return c.json({
     recipe,
     metadata: metadataFromRow(rawMetadata),

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { SuggestPantryPicker } from "@/components/suggest/SuggestPantryPicker";
+import { PantryCloudSync } from "@/components/pantry/PantryCloudSync";
 import { SuggestPantryScanPanel } from "@/components/suggest/SuggestPantryScanPanel";
 import { buildSuggestQueryString } from "@/lib/suggestQuery";
 import {
@@ -76,6 +77,18 @@ export function PantryInventory() {
           Орцууд зөвхөн энэ төхөөрөмж дээр хадгалагдана.
         </p>
       </header>
+
+      <details className="rounded-2xl border border-[#dfe9dc] bg-white p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-[#276440]">
+          Утас, компьютерийн орцоо синк хийх (бүртгэлтэй үед)
+        </summary>
+        <div className="pt-4">
+          <PantryCloudSync items={items} onRestore={(restored) => {
+            setItems(restored);
+            setSelectedIds(new Set(restored.slice(0,30).map(item => item.canonical_id)));
+          }} />
+        </div>
+      </details>
 
       <section className="rounded-3xl border border-[#deeadb] bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

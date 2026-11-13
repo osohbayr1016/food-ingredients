@@ -1,6 +1,6 @@
 import type { RecipePatchPayload } from "./recipePayload";
 import { enrichPatchIngredientCanonicals } from "./ingredientCanonicalResolve";
-import { metadataUpsert } from "./recipeMetadata";
+import { metadataUpsert, recipeEvidenceUpsert } from "./recipeMetadata";
 
 function publishedVal(v?: number | boolean) {
   return v === true || v === 1 ? 1 : 0;
@@ -84,7 +84,10 @@ export async function insertRecipe(db: D1Database, recipeId: string, patch: Reci
       enriched.recipe.import_external_id ?? null,
     ),
     ...childStatements(db, recipeId, enriched),
-    ...(enriched.metadata ? [metadataUpsert(db, recipeId, enriched.metadata)] : []),
+    ...(enriched.metadata ? [
+      metadataUpsert(db,recipeId,enriched.metadata),
+      recipeEvidenceUpsert(db,recipeId,enriched.metadata),
+    ] : []),
   ];
   await db.batch(stmts);
 }
@@ -134,7 +137,10 @@ export async function applyRecipePatch(
   stmts.push(db.prepare(`DELETE FROM ingredients WHERE recipe_id = ?`).bind(recipeId));
   stmts.push(db.prepare(`DELETE FROM steps WHERE recipe_id = ?`).bind(recipeId));
   stmts.push(...childStatements(db, recipeId, enriched));
-  if (enriched.metadata) stmts.push(metadataUpsert(db, recipeId, enriched.metadata));
+  if (enriched.metadata) {
+    stmts.push(metadataUpsert(db,recipeId,enriched.metadata));
+    stmts.push(recipeEvidenceUpsert(db,recipeId,enriched.metadata));
+  }
   // Edits invalidate an earlier approval-to-publish queue entry.
   // The reviewer must explicitly queue the updated version again.
   stmts.push(db.prepare(

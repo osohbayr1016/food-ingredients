@@ -435,3 +435,29 @@ SELECT ic.id,ic.name,COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_
   WHERE a.canonical_id=ic.id),'')
 FROM ingredient_canonicals ic
 WHERE NOT EXISTS(SELECT 1 FROM ingredient_search_fts f WHERE f.canonical_id=ic.id);
+
+-- Per-account pantry snapshot. Changes require an exact revision match.
+-- No personal pantry data is stored for guests.
+CREATE TABLE IF NOT EXISTS user_pantry_snapshots (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  items_json TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(items_json)),
+  revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Revocable JWT session versions, safe for legacy tokens issued with version zero.
+CREATE TABLE IF NOT EXISTS user_session_versions (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  version INTEGER NOT NULL DEFAULT 0 CHECK(version>=0),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Evidence references are separate from a manual review flag.
+-- Legacy recipes remain readable but don't qualify as source-backed safety matches.
+CREATE TABLE IF NOT EXISTS recipe_evidence (
+  recipe_id TEXT PRIMARY KEY REFERENCES recipes(id) ON DELETE CASCADE,
+  allergen_evidence_url TEXT,
+  nutrition_evidence_url TEXT,
+  review_notes TEXT,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

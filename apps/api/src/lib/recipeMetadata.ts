@@ -20,6 +20,12 @@ export function validateRecipeMetadata(m: RecipeMetadata | undefined): string[] 
   };
   if (!validUrl(m.source_url)) errors.push("metadata_invalid_source_url");
   if (!validUrl(m.video_url)) errors.push("metadata_invalid_video_url");
+  if (!validUrl(m.allergen_evidence_url)) errors.push("metadata_invalid_allergen_evidence_url");
+  if (!validUrl(m.nutrition_evidence_url)) errors.push("metadata_invalid_nutrition_evidence_url");
+  if (m.review_notes != null && (typeof m.review_notes!=="string" || m.review_notes.length>2000))
+    errors.push("metadata_invalid_review_notes");
+  if (m.allergen_status==="ingredients_reviewed" && !m.allergen_evidence_url?.trim())
+    errors.push("metadata_requires_allergen_evidence");
   if (m.license_name != null && m.license_name.length > 120) errors.push("metadata_invalid_license");
   if (m.nutrition_source != null && m.nutrition_source.length > 300) errors.push("metadata_invalid_nutrition_source");
   if (m.review_status != null && !["pending", "approved"].includes(m.review_status)) errors.push("metadata_invalid_review_status");
@@ -35,6 +41,8 @@ export function validateRecipeMetadata(m: RecipeMetadata | undefined): string[] 
   }
   if ([m.calories_kcal, m.protein_g, m.carbs_g, m.fat_g].some(v => v != null) &&
       !m.nutrition_source?.trim()) errors.push("metadata_requires_nutrition_source");
+  if ([m.calories_kcal,m.protein_g,m.carbs_g,m.fat_g].some(v=>v!=null) &&
+      !m.nutrition_evidence_url?.trim()) errors.push("metadata_requires_nutrition_evidence");
   return errors;
 }
 
@@ -47,6 +55,9 @@ export function normalizedRecipeMetadata(m: RecipeMetadata): Required<RecipeMeta
     allergen_status: m.allergen_status === "ingredients_reviewed" ? "ingredients_reviewed" : "unknown",
     allergens: [...new Set((m.allergens ?? []).filter((x): x is AllergenCode => VALID_CODES.has(x)))],
     nutrition_source: m.nutrition_source?.trim() || null,
+    allergen_evidence_url:m.allergen_evidence_url?.trim() || null,
+    nutrition_evidence_url:m.nutrition_evidence_url?.trim() || null,
+    review_notes:m.review_notes?.trim() || null,
     calories_kcal: m.calories_kcal ?? null,
     protein_g: m.protein_g ?? null,
     carbs_g: m.carbs_g ?? null,
@@ -75,11 +86,26 @@ export function metadataUpsert(db: D1Database, recipeId: string, raw: RecipeMeta
   );
 }
 
+/** Persist source references atomically with the recipe. */
+export function recipeEvidenceUpsert(db: D1Database, recipeId: string, raw: RecipeMetadata): D1PreparedStatement {
+  const m=normalizedRecipeMetadata(raw);
+  return db.prepare(`INSERT INTO recipe_evidence(
+    recipe_id,allergen_evidence_url,nutrition_evidence_url,review_notes,updated_at
+  ) VALUES(?,?,?,?,datetime('now'))
+  ON CONFLICT(recipe_id) DO UPDATE SET
+    allergen_evidence_url=excluded.allergen_evidence_url,
+    nutrition_evidence_url=excluded.nutrition_evidence_url,
+    review_notes=excluded.review_notes,
+    updated_at=datetime('now')`
+  ).bind(recipeId,m.allergen_evidence_url,m.nutrition_evidence_url,m.review_notes);
+}
+
 /** Never imply that missing review data means a food is safe. */
 export function metadataFromRow(row: Record<string, unknown> | null) {
   if (!row) return { review_status: "pending" as const, allergen_status: "unknown" as const,
     allergens: [] as string[], source_url: null, license_name: null, video_url: null,
-    nutrition_source: null, calories_kcal: null, protein_g: null, carbs_g: null, fat_g: null };
+    nutrition_source: null, calories_kcal: null, protein_g: null, carbs_g: null, fat_g: null,
+    allergen_evidence_url:null,nutrition_evidence_url:null,review_notes:null };
   let allergens: string[] = [];
   try {
     const parsed: unknown = JSON.parse(String(row.allergens_json ?? "[]"));
@@ -87,12 +113,17 @@ export function metadataFromRow(row: Record<string, unknown> | null) {
   } catch { /* treat invalid metadata as unknown */ }
   return {
     review_status: row.review_status === "approved" ? "approved" as const : "pending" as const,
-    allergen_status: row.allergen_status === "ingredients_reviewed" ? "ingredients_reviewed" as const : "unknown" as const,
+    allergen_status: row.allergen_status === "ingredients_reviewed" &&
+      typeof row.allergen_evidence_url==="string" && row.allergen_evidence_url.trim()
+      ? "ingredients_reviewed" as const : "unknown" as const,
     allergens,
     source_url: typeof row.source_url === "string" ? row.source_url : null,
     license_name: typeof row.license_name === "string" ? row.license_name : null,
     video_url: typeof row.video_url === "string" ? row.video_url : null,
     nutrition_source: typeof row.nutrition_source === "string" ? row.nutrition_source : null,
+    allergen_evidence_url:typeof row.allergen_evidence_url==="string" ? row.allergen_evidence_url : null,
+    nutrition_evidence_url:typeof row.nutrition_evidence_url==="string" ? row.nutrition_evidence_url : null,
+    review_notes:typeof row.review_notes==="string" ? row.review_notes : null,
     calories_kcal: typeof row.calories_kcal === "number" ? row.calories_kcal : null,
     protein_g: typeof row.protein_g === "number" ? row.protein_g : null,
     carbs_g: typeof row.carbs_g === "number" ? row.carbs_g : null,
