@@ -6,6 +6,7 @@ export type IngredientPreviewLine = {
   note: string | null;
   matched: boolean;
   quantity_issue?: boolean;
+  quantity_status?: "enough" | "shortfall" | "unknown" | "missing";
 };
 
 export type SuggestResultRow = {
@@ -23,6 +24,10 @@ export type SuggestResultRow = {
   total_ingredients: number;
   ingredients_preview: IngredientPreviewLine[];
   pantry_shortfall?: boolean;
+  missing_count?: number;
+  shortfall_count?: number;
+  unknown_count?: number;
+  availability?: "quantities_match" | "check_quantities" | "missing_ingredients";
 };
 
 export type SuggestSortKey = "match" | "time" | "difficulty" | "serves";
