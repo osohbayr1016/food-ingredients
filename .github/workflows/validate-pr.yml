@@ -27,6 +27,8 @@ jobs:
         run: node --experimental-strip-types --test apps/api/tests/recipe_safety.test.mjs
       - name: Pantry quantity allocation tests
         run: node --experimental-strip-types --test apps/api/tests/pantry_matching.test.mjs
+      - name: Bilingual recipe search tests
+        run: node --experimental-strip-types --test apps/api/tests/recipe-search.test.mjs
       - name: Pantry inventory unit tests
         run: node --experimental-strip-types --test apps/web/tests/pantry-inventory.test.mjs
       - name: Meal-shopping arithmetic tests
