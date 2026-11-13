@@ -166,6 +166,7 @@ export function CookingExperience({
         recipeId={data.recipe.id}
         onClose={() => setFinish(false)}
         onSaved={() => restartCooking(true)}
+        onDone={() => restartCooking(true)}
       />
     </div>
   );
