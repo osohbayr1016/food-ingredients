@@ -10,6 +10,8 @@ import {
   fetchAdminRecipes,
   queueAdminRecipe,
   cancelQueuedRecipe,
+  fetchRecipeAutomationStatus,
+  type RecipeAutomationStatus,
   type AdminRecipeListRow,
   type AdminRecipeStatus,
 } from "@/lib/adminRecipeFetch";
@@ -23,6 +25,7 @@ export function RecipeManagementList() {
   const [queueBusyId, setQueueBusyId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<AdminRecipeListRow | null>(null);
   const [status, setStatus] = useState<AdminRecipeStatus>("all");
+  const [automation, setAutomation] = useState<RecipeAutomationStatus | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const requestId = useRef(0);
@@ -59,6 +62,14 @@ export function RecipeManagementList() {
     else { ++requestId.current; setRows(null); setHasMore(false); }
     return () => { ++requestId.current; };
   }, [adminSecret, load]);
+  useEffect(() => {
+    let active = true;
+    if (!adminSecret.trim()) { setAutomation(null); return; }
+    void fetchRecipeAutomationStatus(adminSecret)
+      .then(result => { if (active) setAutomation(result); })
+      .catch(() => { if (active) setAutomation(null); });
+    return () => { active = false; };
+  }, [adminSecret]);
 
   async function toggleQueue(row: AdminRecipeListRow) {
     if (!adminSecret.trim()) return;
@@ -78,6 +89,7 @@ export function RecipeManagementList() {
       }
       setRows(prev => (prev ?? []).map(x =>
         x.id === row.id ? {...x,queue_status:currentlyQueued ? null : "queued"} : x));
+      setAutomation(prev => prev ? {...prev,queued_count:Math.max(0,prev.queued_count+(currentlyQueued?-1:1))} : prev);
     } catch {
       setErr("Нийтлэлийн дараалал өөрчилж чадсангүй. Жорын эрх, хугацаа, орц, алхам болон review-ийг шалгаарай.");
     } finally {
@@ -131,6 +143,19 @@ export function RecipeManagementList() {
           </div>
         </header>
 
+        {automation && (
+          <div role="status" className={`mb-5 rounded-2xl border p-4 text-sm ${automation.publish_enabled
+            ? "border-[#d1e6cc] bg-[#f0f8ec] text-[#214c33]"
+            : "border-amber-200 bg-amber-50 text-amber-950"}`}>
+            <p className="font-semibold">Өдөр тутмын нийтлэлт: {automation.publish_enabled ? "Идэвхтэй" : "Унтраалттай"}</p>
+            <p className="mt-1">
+              Дараалалд {automation.queued_count} жор · Автомат импорт: {automation.import_enabled ? "идэвхтэй" : "унтраалттай"}
+            </p>
+            {!automation.publish_enabled && <p className="mt-2 text-xs">
+              Жорыг дараалалд оруулсан ч автоматаар нийтлэгдэхгүй. Лиценз, мэдээлэл, database migration-аа шалгасны дараа Worker тохиргоонд AUTO_DAILY_PUBLISH=true болгон идэвхжүүлнэ.
+            </p>}
+          </div>
+        )}
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <label className="text-sm font-medium text-zinc-700">Төлөвөөр шүүх
             <select value={status} onChange={e => setStatus(e.target.value as AdminRecipeStatus)}
