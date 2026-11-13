@@ -19,6 +19,10 @@ export function SuggestResultCard({ row }: { row: SuggestResultRow }) {
   const src = recipeImageUrl(row.image_r2_key);
   const totalMin = row.prep_time + row.cook_time;
   const pct = (row.match_ratio * 100).toFixed(0);
+  const missing = row.missing_count ?? Math.max(0, row.total_ingredients - row.matched_count);
+  const shortfall = row.shortfall_count ?? (row.pantry_shortfall ? 1 : 0);
+  const unknown = row.unknown_count ?? 0;
+  const knownEnough = row.availability === "quantities_match";
   const href = `/recipe/${row.recipe_id}`;
   const preview = row.ingredients_preview ?? [];
 
@@ -43,18 +47,19 @@ export function SuggestResultCard({ row }: { row: SuggestResultRow }) {
               <h3 className="line-clamp-2 text-left font-semibold leading-snug text-zinc-900">
                 {row.title}
               </h3>
-              <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold tabular-nums text-emerald-800">
-                {pct}%
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${knownEnough ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
+                {knownEnough ? "Хэмжээ таарсан" : missing ? `${missing} орц дутуу` : "Хэмжээг шалгах"}
               </span>
             </div>
             <p className="mt-1 text-left text-xs text-emerald-700">
-              Орц тааралт {row.matched_count}/{row.total_ingredients}
+              Орцын нэрийн тааралт: {pct}% · {row.matched_count}/{row.total_ingredients}
             </p>
-            {row.pantry_shortfall ? (
+            {(shortfall > 0 || unknown > 0) && (
               <p className="mt-1 text-left text-xs font-medium text-amber-800">
-                Зарим орцны хэмжээ тань жорноос бага байж магадгүй
+                {shortfall > 0 ? `${shortfall} орц хүрэлцэхгүй. ` : ""}
+                {unknown > 0 ? `${unknown} орцны хэмжээ эсвэл нэгж тодорхойгүй.` : ""}
               </p>
-            ) : null}
+            )}
           </Link>
           <button
             type="button"
@@ -62,7 +67,7 @@ export function SuggestResultCard({ row }: { row: SuggestResultRow }) {
             disabled={preview.length === 0}
             className="mt-2 w-full rounded-xl border border-(--figma-primary)/30 bg-white px-3 py-2 text-left text-sm font-semibold text-(--figma-primary) shadow-sm touch-manipulation active:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Хурдан харах — орц, тоо хэмжээ
+            Дутуу орц, хэмжээг шалгах
           </button>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-600">
             <span className="inline-flex items-center gap-1.5">
