@@ -18,7 +18,6 @@ function emptyImageSlots(): (Blob | null)[] {
 
 export function JsonRecipeUploadForm() {
   const { adminSecret } = useAdminSecret();
-  const [publish, setPublish] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -97,7 +96,12 @@ export function JsonRecipeUploadForm() {
       ...jsonPayload,
       recipe: {
         ...jsonPayload.recipe,
-        is_published: publish,
+        is_published: false,
+      },
+      metadata: {
+        ...jsonPayload.metadata,
+        review_status: "pending",
+        allergen_status: "unknown",
       },
     };
 
@@ -188,15 +192,10 @@ export function JsonRecipeUploadForm() {
 
       <RecipeImagePasteGrid slots={imageSlots} onSlotsChange={onSlotsChange} />
 
-      <label className="flex items-center gap-2 text-sm text-zinc-800">
-        <input
-          type="checkbox"
-          checked={publish}
-          onChange={(e) => setPublish(e.target.checked)}
-          className="h-4 w-4 rounded border-zinc-300 accent-[#E23E3E]"
-        />
-        Нийтлэх (вэб дээр шууд харагдана)
-      </label>
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+        <p className="font-semibold">Эхлээд ноорог үүсгэнэ</p>
+        <p className="mt-1">Эх сурвалж, ашиглах эрх, орц, хугацаа, харшил үүсгэгч болон алхмуудыг админ шалгасны дараа жорыг нийтлэх боломжтой.</p>
+      </div>
 
       {message ? (
         <div className={`rounded-xl p-4 text-sm ${message.includes("Амжилттай") ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
@@ -206,9 +205,9 @@ export function JsonRecipeUploadForm() {
 
       {createdId ? (
         <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">
-          Амжилттай үүслээ.{" "}
-          <Link href={`/recipe/${createdId}`} className="font-semibold underline">
-            Жорыг нээж харах
+          Ноорог үүслээ.{" "}
+          <Link href={`/admin/recipes/${createdId}/edit`} className="font-semibold underline">
+            Нооргоо нээж шалгах
           </Link>
         </div>
       ) : null}
@@ -219,7 +218,7 @@ export function JsonRecipeUploadForm() {
           disabled={busy || !jsonPayload}
           className="w-full sm:w-auto rounded-xl bg-[#E23E3E] px-8 py-3 text-sm font-medium text-white transition-opacity disabled:opacity-50 hover:bg-[#c93636]"
         >
-          {busy ? "Илгээж байна…" : "Жорыг нийтлэх"}
+          {busy ? "Илгээж байна…" : "Ноорог үүсгэх"}
         </button>
       </div>
     </form>
