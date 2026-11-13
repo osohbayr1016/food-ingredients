@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { clientFetch } from "@/lib/clientApi";
 import type { RecipeDetail, RecipeListItem } from "@/lib/types";
 import { aggregateMealShopping, mondayOfWeek, type ShoppingLine } from "@/lib/mealShopping";
+import { fillQuickDinners, mapBounded } from "@/lib/quickMealPlan";
 import { PANTRY_STORAGE_KEY, parsePantryStorage, todayLocalIso, usablePantry } from "@/lib/pantryInventory";
 
 type Meal = "breakfast" | "lunch" | "dinner";
@@ -99,13 +100,18 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
   const [retry, setRetry] = useState(0);
   const [copied, setCopied] = useState(false);
   const [storageWarning, setStorageWarning] = useState(false);
+  const [quickPlanMessage, setQuickPlanMessage] = useState("");
 
   useEffect(() => {
     try {
       const existing = localStorage.getItem(planKey);
       const legacy = existing === null && isCurrent ? localStorage.getItem(LEGACY_PLAN_KEY) : null;
       const source = existing ?? legacy;
-      if (legacy !== null) localStorage.removeItem(LEGACY_PLAN_KEY); // migrate only once
+      if (legacy !== null) {
+        // Preserve legacy data until it has been safely written to the new key.
+        localStorage.setItem(planKey,legacy);
+        localStorage.removeItem(LEGACY_PLAN_KEY);
+      }
       const raw: unknown = JSON.parse(source ?? "{}");
       if (raw && typeof raw === "object" && !Array.isArray(raw)) {
         setPlan(Object.fromEntries(Object.entries(raw).filter(([key,value]) =>
@@ -233,7 +239,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
     setLoadError(false);
     (async () => {
       try {
-        const details = await Promise.all(distinctIds.map(id => getPlannedRecipeDetail(id,controller.signal)));
+        const details = await mapBounded(distinctIds,4,id => getPlannedRecipeDetail(id,controller.signal));
         if (!controller.signal.aborted) {
           setSelectedMeta(Object.fromEntries(distinctIds.map((id,i) => [
             id, { title: details[i].recipe.title, serves: Math.max(1,details[i].recipe.serves) },
@@ -270,6 +276,18 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
 
   const filled = Object.values(plan).filter(Boolean).length;
   const formatted = (n: number) => Number.isInteger(n) ? String(n) : String(Math.round(n*1000)/1000);
+  function generateDinners() {
+    if(!hydrated) return;
+    const result=fillQuickDinners(recipes,plan,weekStart);
+    if(!result.added){
+      setQuickPlanMessage(result.eligible ? "Оройн хоолны бүх өдөр дүүрсэн эсвэл тохирох давтагдаагүй жор үлдээгүй байна."
+        : "45 минутаас богино, хялбар эсвэл дунд түвшний жор одоогоор байхгүй.");
+      return;
+    }
+    setPlan(result.plan);
+    setChecked({});
+    setQuickPlanMessage(`${result.added} оройн хоол сонголоо. Хүссэн өдрийн хоолоо өөрчилж болно. Орц, харшил болон хадгалах хугацааг заавал шалгаарай.`);
+  }
 
   async function copyShopping() {
     const text = shopping.map(s => `${checked[s.key] ? "✓ " : "□ "}${s.name} — ${formatted(s.quantity)} ${s.unit}`).join("\n");
@@ -288,10 +306,15 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
       <section className="space-y-4 rounded-3xl border border-[#e0e9dd] bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-[#214632]">{filled}/21 хоол сонгосон</h2>
+          <button type="button" onClick={generateDinners} disabled={!hydrated}
+            className="min-h-11 rounded-xl bg-[#276440] px-4 text-sm font-bold text-white disabled:opacity-50">
+            7 өдрийн оройн хоол сонгох
+          </button>
           {filled > 0 && <button type="button"
             onClick={() => { if (window.confirm("7 хоногийн төлөвлөгөөг арилгах уу?")) { setPlan({}); setPortions({}); } }}
             className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600">Арилгах</button>}
         </div>
+        {quickPlanMessage && <p role="status" className="rounded-2xl border border-[#dcead7] bg-[#f1f8ed] px-4 py-3 text-sm text-[#276440]">{quickPlanMessage}</p>}
         <div className="no-scrollbar flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Өдрөө сонгох">
           {dateLabels.map((d,i) => (
             <button type="button" key={d} aria-pressed={day===i} onClick={()=>setDay(i)}
@@ -361,6 +384,9 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
       <section className="rounded-3xl border border-[#e0e9dd] bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><h2 className="text-xl font-bold text-[#244834]">Худалдан авах жагсаалт</h2>
+            {!!shopping.length && <p className="mt-1 text-xs font-semibold text-[#356a46]">
+              {shopping.filter(line=>checked[line.key]).length}/{shopping.length} орц бэлдсэн
+            </p>
             <p className="mt-1 text-xs text-zinc-600">Сонгосон порцоор тооцоолж, хөргөгчинд байгаа хэмжээг боломжтой нэгжээр нь хасна. Тодорхойгүй нэгжүүдийг гараар шалгаарай.</p>
           </div>
           {!!shopping.length && <button type="button" onClick={() => void copyShopping()}
