@@ -47,12 +47,10 @@ export function RecipeMetadataEditor({
           onChange={e => patch({ video_url: e.target.value || null })}
           className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2" />
       </label>
-      <label className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-white p-3 text-sm">
-        <input type="checkbox" checked={value.review_status === "approved"}
-          onChange={e => patch({ review_status: e.target.checked ? "approved" : "pending" })}
-          className="h-5 w-5 accent-emerald-700" />
-        <span>Жор, зураг/видеоны эрх, орц, хугацаа, алхмуудыг нягталж **нийтлэхэд зөвшөөрөв**</span>
-      </label>
+      <div className="rounded-xl border border-emerald-200 bg-white p-3 text-sm">
+        <p className="font-semibold text-[#214c33]">Жорын хяналтын төлөв: {value.review_status === "approved" ? "Баталгаажсан" : "Шалгалт хүлээж байна"}</p>
+        <p className="mt-1 text-xs text-zinc-600">Жороо хадгалж, зураг/видеоны эрх, орц, хугацаа болон алхмуудыг хянасны дараа доорх тусдаа “Хяналтаар батлах” үйлдлийг ашиглана.</p>
+      </div>
       <div className="space-y-2 border-t border-emerald-100 pt-4">
         <h3 className="font-semibold">Харшлын орцын шалгалт</h3>
         <p className="text-xs text-zinc-600">Энэ нь зөвхөн жор дахь орцын мэдээллийн шалгалт. Бохирдол, савлагааны эрсдэлийг үгүйсгэхгүй.</p>

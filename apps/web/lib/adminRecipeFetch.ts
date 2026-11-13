@@ -37,6 +37,16 @@ export async function fetchAdminRecipes(token: string, page = 1, status: AdminRe
   };
 }
 
+export async function approveAdminRecipe(token: string, recipeId: string) {
+  return fetch(`${apiBase()}/admin/recipes/${encodeURIComponent(recipeId)}/approve`, {
+    method: "POST", headers: adminHeaders(token),
+  });
+}
+export async function publishAdminRecipe(token: string, recipeId: string) {
+  return fetch(`${apiBase()}/admin/recipes/${encodeURIComponent(recipeId)}/publish`, {
+    method: "POST", headers: adminHeaders(token),
+  });
+}
 export async function queueAdminRecipe(token: string, recipeId: string) {
   return fetch(`${apiBase()}/admin/recipes/${encodeURIComponent(recipeId)}/queue`, {
     method: "POST", headers: adminHeaders(token),
