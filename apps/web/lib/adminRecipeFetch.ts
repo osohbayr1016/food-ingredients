@@ -16,14 +16,23 @@ export type AdminRecipeListRow = {
   cuisine: string;
   is_published: number;
   created_at: string;
+  review_status?: "pending" | "approved" | null;
+  license_name?: string | null;
 };
 
-export async function fetchAdminRecipes(token: string) {
-  const res = await fetch(`${apiBase()}/admin/recipes`, { headers: adminHeaders(token) });
-  const j = (await res.json().catch(() => ({}))) as { recipes?: AdminRecipeListRow[] };
+export type AdminRecipeStatus = "all" | "draft" | "published" | "pending" | "ready";
+
+export async function fetchAdminRecipes(token: string, page = 1, status: AdminRecipeStatus = "all") {
+  const search = new URLSearchParams({page:String(page),status});
+  const res = await fetch(`${apiBase()}/admin/recipes?${search}`, { headers: adminHeaders(token) });
+  const j = (await res.json().catch(() => ({}))) as {
+    recipes?: AdminRecipeListRow[];
+    pagination?: {page:number;has_more:boolean};
+  };
   return {
-    ok: res.ok,
-    recipes: j.recipes ?? [],
+    ok: res.ok && Array.isArray(j.recipes),
+    recipes: Array.isArray(j.recipes) ? j.recipes : [],
+    hasMore: j.pagination?.has_more === true,
   };
 }
 
