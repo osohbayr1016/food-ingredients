@@ -90,7 +90,10 @@ export async function scoreMatchingRecipes(
     matchCond +
     ` THEN 1 ELSE 0 END) AS matched_rows, count(i.id) AS total_rows
      FROM recipes r JOIN ingredients i ON i.recipe_id = r.id
-     WHERE ${whereSql} GROUP BY r.id`;
+     WHERE ${whereSql} GROUP BY r.id
+     HAVING matched_rows > 0
+     ORDER BY (CAST(matched_rows AS REAL) / NULLIF(total_rows,0)) DESC, matched_rows DESC
+     LIMIT 120`;
 
   // SELECT placeholders are evaluated before WHERE placeholders.
   const bindsScore: (string | number)[] = [];
@@ -106,7 +109,7 @@ export async function scoreMatchingRecipes(
     })
     .filter((r) => r.pct >= 0.5 || r.matched_rows > 0)
     .sort((a, b) => b.pct - a.pct || b.matched_rows - a.matched_rows)
-    .slice(0, 20);
+    .slice(0, 120);
   return scored.map(({ pct: _p, ...row }) => row);
 }
 
