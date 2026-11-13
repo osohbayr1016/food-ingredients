@@ -71,6 +71,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
   const [shopping, setShopping] = useState<ShoppingLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [copied, setCopied] = useState(false);
   const [storageWarning, setStorageWarning] = useState(false);
 
@@ -186,7 +187,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
       }
     })();
     return () => controller.abort();
-  }, [plan,portions,hydrated]);
+  }, [plan,portions,hydrated,retry]);
 
   const matchingRecipes = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -195,7 +196,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
   }, [query,recipes,searchResults]);
 
   const filled = Object.values(plan).filter(Boolean).length;
-  const formatted = (n: number) => Number.isInteger(n) ? String(n) : String(Math.round(n*100)/100);
+  const formatted = (n: number) => Number.isInteger(n) ? String(n) : String(Math.round(n*1000)/1000);
 
   async function copyShopping() {
     const text = shopping.map(s => `${checked[s.key] ? "✓ " : "□ "}${s.name} — ${formatted(s.quantity)} ${s.unit}`).join("\n");
@@ -215,11 +216,11 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-[#214632]">{filled}/21 хоол сонгосон</h2>
           {filled > 0 && <button type="button"
-            onClick={() => { if (window.confirm("7 хоногийн төлөвлөгөөг арилгах уу?")) setPlan({}); }}
+            onClick={() => { if (window.confirm("7 хоногийн төлөвлөгөөг арилгах уу?")) { setPlan({}); setPortions({}); } }}
             className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600">Арилгах</button>}
         </div>
         <div className="no-scrollbar flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Өдрөө сонгох">
-          {DAYS.map((d,i) => (
+          {dateLabels.map((d,i) => (
             <button type="button" key={d} aria-pressed={day===i} onClick={()=>setDay(i)}
               className={`min-h-11 shrink-0 rounded-xl px-4 text-sm font-semibold transition ${day===i ? "bg-[#245d3b] text-white" : "bg-[#edf4e9] text-[#41644b] hover:bg-[#dfebd8]"}`}>
               {d}
@@ -231,22 +232,45 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
             placeholder="Жишээ: тахиа, шөл..."
             className="mt-2 w-full rounded-xl border border-[#d8e6d5] px-4 py-3 text-sm outline-none focus:border-[#2e7449]" />
         </label>
+        {searchBusy && <p role="status" className="text-xs text-zinc-500">Хоол хайж байна…</p>}
+        {searchError && <p role="alert" className="text-xs text-amber-800">Хайлтын мэдээлэл ачаалж чадсангүй.</p>}
         <div className="grid gap-3 md:grid-cols-3">
           {MEALS.map(meal => {
             const key = `${day}|${meal.id}`, chosen = plan[key] ?? "";
-            const options = matchingRecipes.some(x=>x.id===chosen) ? matchingRecipes :
-              [...recipes.filter(x=>x.id===chosen),...matchingRecipes];
+            const selectedRecipe = matchingRecipes.find(x => x.id === chosen) ?? recipes.find(x=>x.id===chosen);
+            const defaultPortions = Math.max(1,selectedRecipe?.serves ?? 1);
             return (
-              <label key={meal.id} className="block rounded-2xl bg-[#f5f9f3] p-4">
-                <span className="text-sm font-bold text-[#31573d]">{meal.title}</span>
-                <select value={chosen} onChange={e => setPlan(prev=>({...prev,[key]:e.target.value}))}
-                  className="mt-3 min-h-11 w-full rounded-xl border border-[#d7e4d3] bg-white px-3 py-2 text-sm text-[#293d2e]">
-                  <option value="">Хоол сонгох</option>
-                  {options.map(recipe => <option key={recipe.id} value={recipe.id}>{recipe.title}</option>)}
-                </select>
-                {chosen && <a href={`/recipe/${encodeURIComponent(chosen)}`}
-                  className="mt-2 inline-block text-xs font-semibold text-[#2f7046] underline">Хийх зааврыг харах</a>}
-              </label>
+              <div key={meal.id} className="rounded-2xl bg-[#f5f9f3] p-4">
+                <label className="block text-sm font-bold text-[#31573d]">{meal.title}
+                  <select value={chosen} onChange={e => {
+                    const id = e.target.value;
+                    setPlan(prev => ({...prev,[key]:id}));
+                    const found = matchingRecipes.find(r=>r.id===id);
+                    if (found) setTitles(prev=>({...prev,[id]:found.title}));
+                    setPortions(prev=>{const next={...prev};delete next[key];return next;});
+                  }}
+                    className="mt-3 min-h-11 w-full rounded-xl border border-[#d7e4d3] bg-white px-3 py-2 text-sm font-normal text-[#293d2e]">
+                    <option value="">Хоол сонгох</option>
+                    {chosen && !selectedRecipe && <option value={chosen}>{titles[chosen] ?? "Өмнө сонгосон жор"}</option>}
+                    {matchingRecipes.map(recipe => <option key={recipe.id} value={recipe.id}>{recipe.title}</option>)}
+                  </select>
+                </label>
+                {chosen && <>
+                  <label className="mt-3 flex items-center justify-between gap-3 text-xs font-semibold text-[#31573d]">
+                    Порц
+                    <input type="number" min="1" max="30" step="1"
+                      value={portions[key] ?? defaultPortions}
+                      onChange={e => {
+                        const number = Number(e.target.value);
+                        if (Number.isSafeInteger(number) && number >= 1 && number <= 30)
+                          setPortions(prev=>({...prev,[key]:number}));
+                      }}
+                      className="min-h-10 w-20 rounded-lg border border-[#d7e4d3] bg-white px-2 text-right text-sm font-normal" />
+                  </label>
+                  <a href={`/recipe/${encodeURIComponent(chosen)}`}
+                    className="mt-2 inline-block text-xs font-semibold text-[#2f7046] underline">Хийх зааврыг харах</a>
+                </>}
+              </div>
             );
           })}
         </div>
@@ -254,14 +278,17 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
       <section className="rounded-3xl border border-[#e0e9dd] bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><h2 className="text-xl font-bold text-[#244834]">Худалдан авах жагсаалт</h2>
-            <p className="mt-1 text-xs text-zinc-600">Сонгосон жоруудын бүх орц. Нэгж өөр бол тусдаа мөрөнд гарна.</p>
+            <p className="mt-1 text-xs text-zinc-600">Сонгосон порцоор тооцоолж, хөргөгчинд байгаа хэмжээг боломжтой нэгжээр нь хасна. Тодорхойгүй нэгжүүдийг гараар шалгаарай.</p>
           </div>
           {!!shopping.length && <button type="button" onClick={() => void copyShopping()}
             className="rounded-xl bg-[#275d3d] px-4 py-2 text-xs font-bold text-white">{copied ? "Хууллаа" : "Жагсаалт хуулах"}</button>}
         </div>
         {loading ? <p className="py-6 text-sm text-zinc-500">Орцуудыг нэгтгэж байна…</p> :
-         loadError ? <p role="alert" className="py-6 text-sm text-amber-800">Жорын мэдээлэл татаж чадсангүй. Холболтоо шалгаарай.</p> :
-         !shopping.length ? <p className="py-8 text-sm text-zinc-500">Эхлээд энэ долоо хоногийн хоолоо сонгоорой.</p> :
+         loadError ? <div role="alert" className="py-6 text-sm text-amber-800">Жорын мэдээлэл татаж чадсангүй.
+           <button type="button" onClick={() => setRetry(n=>n+1)}
+             className="ml-2 font-semibold underline">Дахин оролдох</button>
+         </div> :
+         !shopping.length ? <p className="py-8 text-sm text-zinc-500">{filled ? "Хөргөгчинд байгаа орц хүрэлцэж байна (мэдэгдэхгүй хэмжээ, нэгжийг шалгаарай)." : "Эхлээд энэ долоо хоногийн хоолоо сонгоорой."}</p> :
          <ul className="mt-5 grid gap-2 sm:grid-cols-2">
            {shopping.map(line=><li key={line.key}>
              <label className="flex min-h-11 items-center gap-3 rounded-xl bg-[#f7f9f5] px-3 py-2 text-sm">
@@ -271,6 +298,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
                <span className={`min-w-0 flex-1 ${checked[line.key] ? "text-zinc-400 line-through" : "text-zinc-800"}`}>{line.name}</span>
                <span className="shrink-0 font-semibold text-zinc-600">{formatted(line.quantity)} {line.unit}</span>
              </label>
+             {line.stockUncertain && <p className="mt-1 pl-3 text-[11px] text-amber-800">Хөргөгчийн нэгж тохироогүй тул хэмжээг гараар шалгана уу.</p>}
            </li>)}
          </ul>}
       </section>
