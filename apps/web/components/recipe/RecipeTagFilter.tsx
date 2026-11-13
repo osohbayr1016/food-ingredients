@@ -29,21 +29,22 @@ export function RecipeTagFilter() {
 
   return (
     <label className="space-y-1">
-      <span className="text-xs text-zinc-500">Tag</span>
+      <span className="text-xs text-zinc-500">Хоолны төрөл</span>
       <select
         disabled={pending}
-        defaultValue={sp?.get("tag") ?? ""}
+        value={sp?.get("tag") ?? ""}
         className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 touch-manipulation"
         onChange={(e) => {
           startTransition(() => {
             const q = new URLSearchParams(sp?.toString());
+            q.delete("page");
             if (e.target.value) q.set("tag", e.target.value);
             else q.delete("tag");
             router.push(`/?${q.toString()}`);
           });
         }}
       >
-        <option value="">Any tag</option>
+        <option value="">Бүх төрөл</option>
         {tags.map((t) => (
           <option key={t.id} value={t.name}>
             {t.name}
