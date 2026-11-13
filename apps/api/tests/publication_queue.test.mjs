@@ -16,7 +16,7 @@ function fixture({ enabled = "true", candidate = {id:"recipe-1"}, status = "publ
         first: async () => candidate,
       };
     },
-    batch: async (statements) => {batches++; assert.equal(statements.length,5);return [];},
+    batch: async (statements) => {batches++; assert.equal(statements.length,6);return [];},
   };
   return { env:{AUTO_DAILY_PUBLISH:enabled,DB:db},queries,getBatches:()=>batches };
 }
@@ -50,4 +50,11 @@ test("same-day idempotence uses one unique UTC day reservation", async () => {
   await publishOneApprovedRecipe(x.env);
   assert.ok(x.queries.some(sql => sql.includes("INSERT OR IGNORE INTO recipe_publication_days")));
   assert.ok(x.queries.some(sql => sql.includes("d.day_utc=? AND d.recipe_id=?")));
+});
+
+test("daily publication records a separate reviewer-style audit event", async () => {
+  const x = fixture();
+  await publishOneApprovedRecipe(x.env);
+  assert.ok(x.queries.some(sql => sql.includes("INSERT INTO recipe_review_events")));
+  assert.ok(x.queries.some(sql => sql.includes("'daily-scheduler'")));
 });
