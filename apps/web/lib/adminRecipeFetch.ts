@@ -47,6 +47,16 @@ export async function publishAdminRecipe(token: string, recipeId: string) {
     method: "POST", headers: adminHeaders(token),
   });
 }
+export type RecipeAutomationStatus = {
+  import_enabled:boolean; publish_enabled:boolean;
+  queued_count:number; last_published_at:string|null;
+};
+export async function fetchRecipeAutomationStatus(token: string): Promise<RecipeAutomationStatus> {
+  const res=await fetch(`${apiBase()}/admin/automation/status`,{headers:adminHeaders(token)});
+  if(!res.ok) throw new Error("automation_status_unavailable");
+  return await res.json() as RecipeAutomationStatus;
+}
+
 export async function queueAdminRecipe(token: string, recipeId: string) {
   return fetch(`${apiBase()}/admin/recipes/${encodeURIComponent(recipeId)}/queue`, {
     method: "POST", headers: adminHeaders(token),
