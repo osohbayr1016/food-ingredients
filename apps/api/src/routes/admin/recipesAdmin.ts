@@ -80,7 +80,8 @@ recipesAdmin.post("/recipes/:id/approve", async (c) => {
   await c.env.DB.batch([
     c.env.DB.prepare(`UPDATE recipe_metadata SET review_status='approved',
       reviewed_at=datetime('now'),updated_at=datetime('now') WHERE recipe_id=?
-      AND EXISTS (SELECT 1 FROM recipes r WHERE r.id=? AND ${REVIEWABLE_RECIPE_SQL})`)
+      AND EXISTS (SELECT 1 FROM recipes r JOIN recipe_metadata m ON m.recipe_id=r.id
+        WHERE r.id=? AND ${REVIEWABLE_RECIPE_SQL})`)
       .bind(recipeId,recipeId),
     c.env.DB.prepare(`INSERT INTO recipe_review_events(id,recipe_id,actor_id,action)
       SELECT ?,?,?,'approved' WHERE EXISTS (
@@ -97,6 +98,10 @@ recipesAdmin.post("/recipes/:id/approve", async (c) => {
 /** Immediately release an already approved draft, without bypassing editorial checks. */
 recipesAdmin.post("/recipes/:id/publish", async (c) => {
   const recipeId = c.req.param("id");
+  const eligible = await c.env.DB.prepare(`SELECT r.id FROM recipes r
+    JOIN recipe_metadata m ON m.recipe_id=r.id WHERE r.id=? AND ${READY_TO_PUBLISH_SQL}`)
+    .bind(recipeId).first();
+  if (!eligible) return c.json({error:"editorial_approval_required"},409);
   const actor = (await bearerPayload(c))?.sub ?? "admin-secret";
   const eventId = crypto.randomUUID();
   await c.env.DB.batch([
