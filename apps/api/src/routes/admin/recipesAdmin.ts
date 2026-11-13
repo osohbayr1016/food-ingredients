@@ -27,7 +27,7 @@ recipesAdmin.get("/recipes", async (c) => {
     where.push("r.is_published=0 AND COALESCE(m.review_status,'pending') <> 'approved'");
   }
   if (status === "ready") {
-    where.push("r.is_published=0 AND m.review_status='approved' AND COALESCE(m.license_name,'') <> ''");
+    where.push(READY_TO_PUBLISH_SQL);
   }
   const { results } = await c.env.DB.prepare(`SELECT r.id,r.title,r.cuisine,
       r.is_published,r.created_at,m.review_status,m.license_name,q.status AS queue_status
