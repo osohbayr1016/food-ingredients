@@ -23,6 +23,8 @@ export function CookingSlideDeck({
   const raf = useRef(0);
   /** Ignore scroll echo while we align programmatically (Prev/Next buttons). */
   const syncing = useRef(false);
+  useEffect(() => () => cancelAnimationFrame(raf.current), []);
+
   const indexRef = useRef(index);
   indexRef.current = index;
 
@@ -65,11 +67,12 @@ export function CookingSlideDeck({
     >
       {Array.from({ length: total }).map((_, i) => (
         <section
+          aria-hidden={Math.abs(i-index)>2}
           key={`slide-${i}`}
           className="relative flex h-dvh max-h-dvh min-h-0 w-full min-w-full shrink-0 snap-center snap-always flex-col"
         >
           <div className="flex min-h-0 max-h-full flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain px-6 pb-56 pt-[calc(env(safe-area-inset-top)+4.5rem)] [-webkit-overflow-scrolling:touch]">
-            {renderSlide(i)}
+            {Math.abs(i-index)<=2 ? renderSlide(i) : null}
           </div>
         </section>
       ))}
