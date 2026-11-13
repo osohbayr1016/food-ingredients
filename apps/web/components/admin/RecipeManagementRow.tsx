@@ -7,10 +7,14 @@ export function RecipeManagementRow({
   r,
   deletingId,
   onDeleteClick,
+  onQueueClick,
+  queueBusy,
 }: {
   r: AdminRecipeListRow;
   deletingId: string | null;
   onDeleteClick: () => void;
+  onQueueClick: () => void;
+  queueBusy: boolean;
 }) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -30,6 +34,7 @@ export function RecipeManagementRow({
           <span className={r.review_status === "approved" ? "rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-800" : "rounded-full bg-amber-50 px-2 py-0.5 text-amber-800"}>
             {r.review_status === "approved" ? "Хянасан" : "Шалгаагүй"}
           </span>
+          {r.queue_status === "queued" && <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-800">Өдөр тутмын дараалалд</span>}
           {!r.license_name && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-rose-800">Ашиглах эрх дутуу</span>}
         </div>
       </div>
@@ -44,6 +49,12 @@ export function RecipeManagementRow({
           href={`/recipe/${r.id}`}
           className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-[#276440] hover:bg-zinc-50"
           target="_blank" rel="noreferrer">Нээх</Link> : null}
+        {!r.is_published && r.review_status === "approved" && r.license_name && (
+          <button type="button" onClick={onQueueClick} disabled={queueBusy}
+            className="rounded-lg border border-[#cde3d0] px-3 py-1.5 text-sm font-semibold text-[#276440] disabled:opacity-50">
+            {queueBusy ? "Хадгалж байна…" : r.queue_status === "queued" ? "Дарааллаас хасах" : "Өдөр тутам нийтлэх"}
+          </button>
+        )}
         <button
           type="button"
           onClick={onDeleteClick}
