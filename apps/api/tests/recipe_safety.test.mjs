@@ -39,3 +39,35 @@ test("metadata normalization deduplicates allergens", () => {
   assert.deepEqual(value.allergens, ["milk", "fish"]);
   assert.equal(value.review_status, "pending");
 });
+
+test("publication requires editorial approval, content rights and complete ingredients", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { createRequire } = await import("node:module");
+  const require = createRequire(new URL("../package.json", import.meta.url));
+  const ts = require("typescript");
+  const code = readFileSync(new URL("../src/lib/recipeValidation.ts", import.meta.url), "utf8");
+  const compiled = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const mod = { exports: {} };
+  new Function("require", "module", "exports", compiled)(
+    (name) => {
+      if (name === "./recipeMetadata") return { validateRecipeMetadata };
+      throw new Error("Unexpected module: " + name);
+    }, mod, mod.exports,
+  );
+  const validate = mod.exports.validateRecipePatch;
+  const valid = {
+    recipe: { title: "Chicken and rice", cuisine: "Mongolian", prep_time: 15,
+      cook_time: 20, difficulty: 1, description: "Cook a safe meal using clean ingredients.",
+      serves: 2, is_published: true },
+    ingredients: [
+      { name: "Rice", quantity: 100, unit: "g", category_id: "cat-extra" },
+      { name: "Chicken", quantity: 150, unit: "g", category_id: "cat-meat" },
+    ],
+    steps: [{ description: "Prepare the rice." }, { description: "Cook thoroughly and serve." }],
+    metadata: { review_status: "approved", license_name: "Original" },
+  };
+  assert.deepEqual(validate(valid), []);
+  assert.ok(validate({ ...valid, metadata: { review_status: "pending", license_name: "Original" } }).includes("publish_requires_editorial_approval"));
+  assert.ok(validate({ ...valid, metadata: { review_status: "approved" } }).includes("publish_requires_content_rights"));
+  assert.ok(validate({ ...valid, ingredients: [] }).includes("publish_requires_ingredients"));
+});
