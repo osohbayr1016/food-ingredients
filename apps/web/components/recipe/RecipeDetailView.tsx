@@ -33,18 +33,14 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
   );
 
   return (
-    <main className="space-y-6 pb-32">
-      <RecipeDetailHero data={data} />
-
-      <header>
-        <h1 className="text-2xl font-bold leading-tight text-zinc-900">
+    <main className="mx-auto max-w-4xl space-y-5 pb-32 pt-6 sm:space-y-6">
+      <header className="space-y-2">
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#478456]">{data.recipe.cuisine}</p>
+        <h1 className="text-2xl font-extrabold leading-tight text-[#203e2c] sm:text-3xl">
           {data.recipe.title}
         </h1>
+        <p className="max-w-2xl text-sm leading-relaxed text-[#617365]">{data.recipe.description}</p>
       </header>
-
-      <p className="text-sm leading-relaxed text-zinc-700">
-        {data.recipe.description}
-      </p>
 
       <RecipeDetailStatRow
         prepTime={data.recipe.prep_time}
@@ -53,15 +49,11 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
         origin={data.recipe.cuisine}
       />
 
-      <div className="flex items-center gap-3 text-xs text-zinc-500">
-        {data.recipe.prep_time > 0 && <span>Бэлтгэл {data.recipe.prep_time} мин</span>}
-        {data.recipe.prep_time > 0 && data.recipe.cook_time > 0 && <span aria-hidden>•</span>}
-        {data.recipe.cook_time > 0 && <span>Хийх {data.recipe.cook_time} мин</span>}
+      <div className="flex items-center gap-3 text-xs font-semibold text-[#59745f]">
+        <span>{data.recipe.difficulty <= 1 ? "Хялбар" : data.recipe.difficulty >= 3 ? "Ахисан" : "Дунд"} түвшин</span>
         <DifficultyDots value={data.recipe.difficulty} />
-        <span className="inline-flex items-center gap-1" aria-hidden>
-          {cuisineEmoji(data.recipe.cuisine)}
-        </span>
       </div>
+      <RecipeDetailHero data={data} />
 
       <section className="space-y-3" aria-label="Хоолны аюулгүй байдал ба шим тэжээл">
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
@@ -99,12 +91,12 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
 
       <ServingSlider
         value={serves}
-        max={Math.max(12, base * 4)}
+        max={Math.min(30, Math.max(12, base * 4))}
         onChange={setServes}
       />
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-bold text-zinc-900">Орц, материал</h2>
+      <section className="scroll-mt-24 space-y-3" id="ingredients">
+        <h2 className="text-xl font-bold text-[#203e2c]">Орц</h2>
         <IngredientGroupedList items={data.ingredients} ctx={ctx} />
       </section>
 
@@ -122,7 +114,9 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
       )}
 
       {data.recipe.tips && (
-        <div className="space-y-2">
+        <details className="rounded-2xl border border-[#dfebe0] bg-[#f7faf5] p-4">
+          <summary className="cursor-pointer text-sm font-bold text-[#276440]">Хоол хийх зөвлөмж</summary>
+          <div className="mt-3 space-y-2">
           {data.recipe.tips
             .split("\n")
             .map((s) => s.trim())
@@ -136,9 +130,10 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
               </div>
             ))}
         </div>
+        </details>
       )}
 
-      <section className="space-y-3" id="making-guide">
+      <section className="scroll-mt-24 space-y-3" id="making-guide">
         <div>
           <h2 className="text-lg font-bold text-zinc-900">Хийх заавар</h2>
           <p className="mt-1 text-sm text-zinc-500">
@@ -179,10 +174,10 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
 
       {data.steps.length > 0 && <Link
         href={`/recipe/${data.recipe.id}/cook?serves=${serves}`}
-        className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-30 inline-flex min-w-[220px] -translate-x-1/2 justify-center rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg shadow-[#276440]/20 touch-manipulation lg:bottom-6"
+        className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-30 inline-flex min-h-12 min-w-[220px] -translate-x-1/2 items-center justify-center rounded-2xl px-6 py-3 text-base font-bold text-white shadow-lg shadow-[#276440]/20 touch-manipulation lg:bottom-6"
         style={{ backgroundColor: "var(--figma-primary)" }}
       >
-        Алхмаар хоол хийх
+        Одоо хоол хийж эхлэх
       </Link>}
     </main>
   );

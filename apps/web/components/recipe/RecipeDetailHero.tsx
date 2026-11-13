@@ -57,7 +57,7 @@ export function RecipeDetailHero({ data }: { data: RecipeDetail }) {
 
   return (
     <section
-      className="relative -mx-4 aspect-[4/3] sm:aspect-[16/9] sm:mx-0"
+      className="relative -mx-4 aspect-[16/10] sm:mx-0 sm:aspect-[16/9]"
       aria-roledescription="carousel"
     >
       <div className="absolute inset-0 overflow-hidden rounded-b-[28px] bg-zinc-200 sm:rounded-3xl">
@@ -75,14 +75,14 @@ export function RecipeDetailHero({ data }: { data: RecipeDetail }) {
       </div>
       <div className="pointer-events-none absolute inset-0 rounded-b-[28px] bg-linear-to-t from-black/75 via-black/20 to-black/40 sm:rounded-3xl" />
       <div
-        className="absolute left-3 top-[calc(env(safe-area-inset-top)+8px)] z-10 flex w-[calc(100%-24px)] items-center justify-between gap-2"
+        className="absolute left-3 top-3 z-10 flex w-[calc(100%-24px)] items-center justify-between gap-2"
         style={{ pointerEvents: "auto" }}
       >
         <button
           type="button"
           aria-label="Буцах"
           onClick={() => router.back()}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-md touch-manipulation"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 backdrop-blur-md touch-manipulation"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path

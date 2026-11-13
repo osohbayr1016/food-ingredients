@@ -10,12 +10,12 @@ function StatCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-w-[31%] flex-1 flex-col items-center rounded-2xl bg-(--figma-soft) px-3 py-3">
-      <div className="text-(--figma-primary)">{children}</div>
-      <div className="mt-2 text-center text-sm font-semibold leading-tight text-(--figma-primary)">
+    <div className="flex min-w-0 flex-1 flex-col items-center justify-center rounded-2xl bg-[#eef6e9] px-1.5 py-3 sm:px-3">
+      <div className="hidden text-[#276440] sm:block">{children}</div>
+      <div className="line-clamp-2 text-center text-sm font-bold leading-snug text-[#24533a] sm:mt-2">
         {label}
       </div>
-      <div className="text-center text-[10px] text-zinc-500">{sub}</div>
+      <div className="mt-1 text-center text-[11px] text-[#637968]">{sub}</div>
     </div>
   );
 }
@@ -32,7 +32,7 @@ export function RecipeDetailStatRow({
   origin: string;
 }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 sm:gap-3">
       <StatCard label={prepTime + cookTime > 0 ? `${prepTime + cookTime} мин` : "Тодорхойгүй"} sub="Нийт хугацаа">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
           <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />

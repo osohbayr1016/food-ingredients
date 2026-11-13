@@ -1,127 +1,35 @@
 "use client";
 
-import { PantryFabButton } from "@/components/layout/PantryFabButton";
+import { activePrimaryDestination, PRIMARY_DESTINATIONS } from "@/lib/primaryNavigation";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const primary = "#276440";
-
-function IconHome({ active }: { active: boolean }) {
-  const c = active ? primary : "#819287";
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"
-        stroke={c}
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function IconDiscover({ active }: { active: boolean }) {
-  const c = active ? primary : "#819287";
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9" stroke={c} strokeWidth="1.8" />
-      <path
-        d="M12 7v5l3 2"
-        stroke={c}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function IconBook({ active }: { active: boolean }) {
-  const c = active ? primary : "#819287";
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M6 4h9a2 2 0 0 1 2 2v14a1 1 0 0 0-1-1H6a2 2 0 0 0-2 2V6a2 2 0 0 1 2-2z"
-        stroke={c}
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path d="M18 6h1a2 2 0 0 1 2 2v12" stroke={c} strokeWidth="1.8" />
-    </svg>
-  );
-}
-
-function IconUser({ active }: { active: boolean }) {
-  const c = active ? primary : "#819287";
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="8" r="3.5" stroke={c} strokeWidth="1.8" />
-      <path
-        d="M5.5 20.5v-1A4.5 4.5 0 0 1 10 15h4a4.5 4.5 0 0 1 4.5 4.5v1"
-        stroke={c}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+function NavIcon({ kind, active }: { kind: "recipes" | "pantry" | "plan"; active: boolean }) {
+  const path = kind === "recipes"
+    ? <><circle cx="10.5" cy="10.5" r="6.75" /><path d="m15.7 15.7 4.3 4.3" /></>
+    : kind === "pantry"
+    ? <><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><path d="M6 11h12M9 6.5v2M9 14v2.5" /></>
+    : <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4M17 3v4M3 10h18M8 15h3M14 15h2" /></>;
+  return <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth={active ? 2 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{path}</svg>;
 }
 
 export function UserBottomNav() {
-  const pathname = usePathname() ?? "";
-  const here = (p: string) => pathname === p;
-
+  const active = activePrimaryDestination(usePathname() ?? "");
   return (
-    <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-100 bg-white shadow-[0_-4px_24px_rgba(0,0,0,0.06)]"
-      style={{ paddingBottom: "calc(8px + env(safe-area-inset-bottom))" }}
-    >
-      <div className="max-w-xl mx-auto px-2 pt-1">
-        <div className="relative flex items-end justify-between gap-0 min-h-[60px] pb-2">
-          <Link
-            aria-current={here("/") ? "page" : undefined}
-            href="/"
-            className="flex flex-1 flex-col items-center gap-1 pt-1.5 text-[11px] font-medium touch-manipulation text-zinc-500"
-          >
-            <IconHome active={here("/")} />
-            <span style={{ color: here("/") ? primary : undefined }}>Нүүр</span>
-          </Link>
-          <Link
-            aria-current={here("/discover") ? "page" : undefined}
-            href="/discover"
-            className="flex flex-1 flex-col items-center gap-1 pt-1.5 text-[11px] font-medium touch-manipulation text-zinc-500"
-          >
-            <IconDiscover active={here("/discover")} />
-            <span style={{ color: here("/discover") ? primary : undefined }}>
-              Жорууд
-            </span>
-          </Link>
-          <div className="relative flex w-16 shrink-0 flex-col items-center justify-end -mt-7">
-            <PantryFabButton />
-            <span
-              className="mt-1 max-w-20 truncate text-center text-[11px] font-medium text-zinc-500"
-              style={{ color: here("/pantry") ? primary : undefined }}
-            >
-              Орц
-            </span>
-          </div>
-          <Link
-            aria-current={here("/saved") ? "page" : undefined}
-            href="/saved"
-            className="flex flex-1 flex-col items-center gap-1 pt-1.5 text-[11px] font-medium touch-manipulation text-zinc-500"
-          >
-            <IconBook active={here("/saved")} />
-            <span style={{ color: here("/saved") ? primary : undefined }}>Хадгалсан</span>
-          </Link>
-          <Link
-            aria-current={here("/profile") || here("/login") ? "page" : undefined}
-            href="/profile"
-            className="flex flex-1 flex-col items-center gap-1 pt-1.5 text-[11px] font-medium touch-manipulation text-zinc-500"
-          >
-            <IconUser active={here("/profile") || here("/login")} />
-            <span style={{ color: here("/profile") || here("/login") ? primary : undefined }}>
-              Профайл
-            </span>
-          </Link>
-        </div>
+    <nav aria-label="Үндсэн гурван цэс"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e3eae0] bg-white/95 shadow-[0_-6px_24px_rgba(21,61,42,0.07)] backdrop-blur-xl"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div className="mx-auto grid max-w-md grid-cols-3 gap-1 px-3 py-2">
+        {PRIMARY_DESTINATIONS.map(item => {
+          const selected = active === item.id;
+          return <Link key={item.id} href={item.href} aria-current={selected ? "page" : undefined}
+            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-2 text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#276440] ${selected
+              ? "bg-[#edf6e8] text-[#20553a]" : "text-[#718174] hover:bg-[#f5f8f1] hover:text-[#276440]"}`}>
+            <NavIcon kind={item.id} active={selected} />
+            <span>{item.label}</span>
+          </Link>;
+        })}
       </div>
     </nav>
   );

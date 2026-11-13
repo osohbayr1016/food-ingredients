@@ -19,6 +19,7 @@ export function ProfileGuestSection() {
   const [tab, setTab] = useState<Tab>("saved");
   const [liked, setLiked] = useState<RecipeListItem[]>([]);
   const [loadingLiked, setLoadingLiked] = useState(false);
+  const [likedError, setLikedError] = useState(false);
   const [, setBump] = useState(0);
 
   const loadLiked = useCallback(async () => {
@@ -28,10 +29,13 @@ export function ProfileGuestSection() {
       return;
     }
     setLoadingLiked(true);
+    setLikedError(false);
     try {
       const { recipes, missingIds } = await fetchGuestLikedRecipes(ids);
       if (missingIds.length) removeLikedIdsFromStorage(missingIds);
       setLiked(recipes);
+    } catch {
+      setLikedError(true);
     } finally {
       setLoadingLiked(false);
     }
@@ -67,9 +71,14 @@ export function ProfileGuestSection() {
         </div>
       </header>
 
-      <ProfileGuestIdentityForm onSaved={() => setBump((n) => n + 1)} />
-
-      <ProfileNutritionGuest />
+      <details className="rounded-2xl border border-[#dfebe0] bg-white p-4">
+        <summary className="cursor-pointer text-sm font-bold text-[#276440]">Миний нэр, профайл тохируулах</summary>
+        <div className="pt-4"><ProfileGuestIdentityForm onSaved={() => setBump((n) => n + 1)} /></div>
+      </details>
+      <details className="rounded-2xl border border-[#dfebe0] bg-white p-4">
+        <summary className="cursor-pointer text-sm font-bold text-[#276440]">Хооллолтын зорилго, илчлэг</summary>
+        <div className="pt-4"><ProfileNutritionGuest /></div>
+      </details>
 
       <div className="flex divide-x divide-zinc-100 rounded-2xl border border-zinc-100 bg-zinc-50/80 py-4 text-center text-sm">
         <div className="flex flex-1 flex-col gap-0.5 px-2">
@@ -113,6 +122,10 @@ export function ProfileGuestSection() {
               Шинээр бүртгүүлэх
             </Link>
           </div>
+        </div>
+      ) : likedError ? (
+        <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-900">Дуртай жоруудыг ачаалж чадсангүй.
+          <button type="button" onClick={() => void loadLiked()} className="ml-2 font-semibold underline">Дахин оролдох</button>
         </div>
       ) : loadingLiked ? (
         <p className="py-8 text-center text-sm text-zinc-500">Ачааллаж байна…</p>

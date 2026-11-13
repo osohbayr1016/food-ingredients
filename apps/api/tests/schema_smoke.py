@@ -4,7 +4,7 @@ import sqlite3
 root = pathlib.Path(__file__).resolve().parents[3]
 db = sqlite3.connect(":memory:")
 db.executescript((root / "apps/api/db/schema.sql").read_text())
-for file in ("0007_recipe_metadata.sql", "0008_auth_rate_limits.sql", "0009_recipe_search_indexes.sql", "0010_publication_queue.sql", "0011_unicode_recipe_search.sql", "0012_publication_days.sql", "0013_editorial_audit.sql"):
+for file in ("0007_recipe_metadata.sql", "0008_auth_rate_limits.sql", "0009_recipe_search_indexes.sql", "0010_publication_queue.sql", "0011_unicode_recipe_search.sql", "0012_publication_days.sql", "0013_editorial_audit.sql", "0014_ingredient_unicode_fts.sql"):
     content = (root / "apps/api/db" / file).read_text()
     db.executescript(content)
     db.executescript(content)  # must be safe to retry
@@ -41,4 +41,11 @@ db.execute("UPDATE ingredient_aliases SET alias='Spud', normalized='spud' WHERE 
 assert db.execute("SELECT recipe_id FROM recipe_search_fts WHERE recipe_search_fts MATCH ?", ('"spud"*',)).fetchone()[0] == 't'
 db.execute("DELETE FROM ingredients WHERE id='ing-pot'")
 assert not db.execute("SELECT recipe_id FROM recipe_search_fts WHERE recipe_search_fts MATCH ?", ('"spud"*',)).fetchall()
+
+assert db.execute("SELECT canonical_id FROM ingredient_search_fts WHERE ingredient_search_fts MATCH ?", ('"төмс"*',)).fetchone()[0] == 'pot'
+assert db.execute("SELECT canonical_id FROM ingredient_search_fts WHERE ingredient_search_fts MATCH ?", ('"spud"*',)).fetchone()[0] == 'pot'
+db.execute("UPDATE ingredient_aliases SET alias='Potato',normalized='potato' WHERE id='al-pot'")
+assert db.execute("SELECT canonical_id FROM ingredient_search_fts WHERE ingredient_search_fts MATCH ?", ('"potato"*',)).fetchone()[0] == 'pot'
+db.execute("DELETE FROM ingredient_aliases WHERE id='al-pot'")
+assert not db.execute("SELECT canonical_id FROM ingredient_search_fts WHERE ingredient_search_fts MATCH ?", ('"potato"*',)).fetchall()
 print("D1-compatible schema & migrations: smoke test passed")

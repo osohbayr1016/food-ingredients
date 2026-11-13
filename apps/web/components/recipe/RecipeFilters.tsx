@@ -43,8 +43,10 @@ export function RecipeFilters() {
     const q = new URLSearchParams(sp?.toString());
     if (value) q.set(key, value); else q.delete(key);
     q.delete("page");
-    router.push(`/?${q.toString()}`, { scroll: false });
+    router.push(`/?${q.toString()}#recipe-list-heading`, { scroll: false });
   }
+  const [expanded, setExpanded] = useState(() => ["cuisine","tag","exclude_allergens","max_calories","min_protein"]
+    .some(key => Boolean(sp?.get(key))));
   const selectedTime = sp?.get("max_cook_time") ?? "";
   const selectedDifficulty = sp?.get("difficulty") ?? "";
   const currentCuisine = sp?.get("cuisine") ?? "";
@@ -52,14 +54,14 @@ export function RecipeFilters() {
     ? [currentCuisine, ...cuisines] : cuisines;
 
   return (
-    <section aria-label="Хоол хайх шүүлтүүр" className="space-y-4 rounded-3xl border border-[#dde9d8] bg-white p-4 sm:p-5">
+    <section aria-label="Хоол хайх шүүлтүүр" className="space-y-4 rounded-3xl border border-[#e2eade] bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-bold text-[#254732]">Хоолоо шүүх</h3>
+        <h3 className="font-bold text-[#254732]">Хурдан шүүх</h3>
         {hasFilters && <button type="button" onClick={() => router.push("/#recipe-list-heading", { scroll: false })}
           className="text-xs font-semibold text-[#276440] underline underline-offset-4">Шүүлтүүр арилгах</button>}
       </div>
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-zinc-600">Хийх нийт хугацаа</p>
+        <p className="text-xs font-semibold text-zinc-600">Хугацаа болон хүндрэл</p>
         <div className="flex flex-wrap gap-2">
           {TIMES.map(t => (
             <button key={t} type="button" aria-pressed={selectedTime === String(t)}
@@ -77,20 +79,20 @@ export function RecipeFilters() {
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-xs font-semibold text-zinc-700">Улсын хоол
-          <select value={currentCuisine} onChange={e => navigate("cuisine", e.target.value)}
-            className="mt-1 min-h-11 w-full rounded-xl border border-[#dce7d7] bg-white px-3 text-sm font-normal text-zinc-800">
-            <option value="">Бүх улсын хоол</option>
-            {cuisineOptions.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          {cuisineError && <span className="mt-1 block text-[11px] font-normal text-amber-700">Улсын нэрс түр ачаалагдсангүй</span>}
-        </label>
-        <RecipeTagFilter />
-      </div>
-      <details className="group rounded-2xl border border-[#e5ece2] bg-[#f9fcf7] p-4">
-        <summary className="cursor-pointer text-sm font-semibold text-[#29573c]">Харшил, шим тэжээл болон бусад шүүлтүүр</summary>
+      <details open={expanded} onToggle={event => setExpanded(event.currentTarget.open)} className="group rounded-2xl border border-[#e5ece2] bg-[#f9fcf7] p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-[#29573c]">Илүү нарийн шүүх · улс, харшил, шим тэжээл</summary>
         <div className="space-y-4 pt-4">
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-xs font-semibold text-zinc-700">Улсын хоол
+            <select value={currentCuisine} onChange={e => navigate("cuisine", e.target.value)}
+              className="mt-1 min-h-11 w-full rounded-xl border border-[#dce7d7] bg-white px-3 text-sm font-normal text-zinc-800">
+              <option value="">Бүх улсын хоол</option>
+              {cuisineOptions.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {cuisineError && <span className="mt-1 block text-[11px] font-normal text-amber-700">Улсын нэрс түр ачаалагдсангүй</span>}
+          </label>
+          <RecipeTagFilter />
+        </div>
           <fieldset className="space-y-2">
             <legend className="text-sm font-semibold text-zinc-700">Харшил үүсгэгч орцуудыг хасах</legend>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

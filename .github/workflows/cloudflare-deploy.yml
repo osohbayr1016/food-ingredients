@@ -108,6 +108,15 @@ jobs:
           packageManager: pnpm
           command: d1 execute food-ingredients --remote --file=db/0013_editorial_audit.sql --yes
 
+      - name: Install Unicode ingredient catalogue index
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0014_ingredient_unicode_fts.sql --yes
+
       - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v3
         with:
