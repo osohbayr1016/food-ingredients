@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { bearerPayload } from "../lib/authBearer";
+import { parseGuestLikeIds } from "../lib/guestLikes";
 
 export const likes = new Hono<{ Bindings: Env }>();
 
@@ -43,10 +44,8 @@ likes.post("/likes/import-guest", async c=>{
   const jwt=await bearerPayload(c);
   if(!jwt)return c.json({error:"auth_required"},401);
   const body=await c.req.json().catch(()=>null) as {recipe_ids?:unknown}|null;
-  if(!Array.isArray(body?.recipe_ids) || body.recipe_ids.length<1 || body.recipe_ids.length>30 ||
-     body.recipe_ids.some(id=>typeof id!=="string" || !id.trim() || id.length>150))
-    return c.json({error:"invalid_recipe_ids"},400);
-  const ids=[...new Set((body.recipe_ids as string[]).map(x=>x.trim()))];
+  const ids=parseGuestLikeIds(body?.recipe_ids);
+  if(!ids)return c.json({error:"invalid_recipe_ids"},400);
   const placeholders=ids.map(()=>"?").join(",");
   try{
     const {results}=await c.env.DB.prepare(
