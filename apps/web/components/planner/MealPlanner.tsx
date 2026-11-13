@@ -102,8 +102,10 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
 
   useEffect(() => {
     try {
-      const source = localStorage.getItem(planKey) ??
-        (isCurrent ? localStorage.getItem(LEGACY_PLAN_KEY) : null);
+      const existing = localStorage.getItem(planKey);
+      const legacy = existing === null && isCurrent ? localStorage.getItem(LEGACY_PLAN_KEY) : null;
+      const source = existing ?? legacy;
+      if (legacy !== null) localStorage.removeItem(LEGACY_PLAN_KEY); // migrate only once
       const raw: unknown = JSON.parse(source ?? "{}");
       if (raw && typeof raw === "object" && !Array.isArray(raw)) {
         setPlan(Object.fromEntries(Object.entries(raw).filter(([key,value]) =>
@@ -208,6 +210,14 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
       setSearchLoadingMore(false);
     }
   }
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === PANTRY_STORAGE_KEY) setRetry(n => n + 1);
+    };
+    window.addEventListener("storage",onStorage);
+    return () => window.removeEventListener("storage",onStorage);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
