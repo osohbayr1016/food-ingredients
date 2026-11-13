@@ -33,6 +33,7 @@ app.get("/health/ready", async (c) => {
     await c.env.DB.prepare("SELECT 1 FROM recipe_publication_dates LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM user_pantry_snapshots LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM user_session_versions LIMIT 1").all();
+    await c.env.DB.prepare("SELECT 1 FROM recipe_evidence LIMIT 1").all();
     return c.json({ ok: true, database: "ready" });
   } catch (error) {
     console.error("health/ready", error);
