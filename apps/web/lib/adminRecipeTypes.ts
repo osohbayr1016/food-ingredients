@@ -1,3 +1,4 @@
+import type { RecipeMetadata } from "./recipeMetadata";
 export type RecipeRow = {
   title: string;
   cuisine: string;
@@ -34,6 +35,7 @@ export type StepRow = {
 };
 
 export type RecipePatchPayload = {
+  metadata?: RecipeMetadata;
   recipe: RecipeRow;
   ingredients: IngRow[];
   steps: StepRow[];
