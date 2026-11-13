@@ -56,6 +56,15 @@ jobs:
           packageManager: pnpm
           command: d1 execute food-ingredients --remote --file=db/0007_recipe_metadata.sql --yes
 
+      - name: Apply additive D1 authentication rate limit migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0008_auth_rate_limits.sql --yes
+
       - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v3
         with:

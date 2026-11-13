@@ -41,5 +41,10 @@ export default {
         throw error;
       }),
     );
+    ctx.waitUntil(
+      env.DB.prepare("DELETE FROM auth_rate_limits WHERE window_start < ?")
+        .bind(Math.floor(Date.now() / 1000) - 48 * 3600).run()
+        .then(() => {}).catch((err) => console.error("auth rate-limit cleanup", err)),
+    );
   },
 };
