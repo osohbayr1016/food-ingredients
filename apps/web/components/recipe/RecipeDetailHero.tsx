@@ -10,39 +10,38 @@ import { recipeHeroSlideUrls } from "@/lib/recipeGallery";
 import type { RecipeDetail } from "@/lib/types";
 
 function ShareRow({ title }: { title: string }) {
+  const [copied, setCopied] = useState(false);
   async function share() {
-    const url =
-      typeof window !== "undefined"
-        ? window.location.href.split("#")[0] ?? ""
-        : "";
+    const url = window.location.href.split("#")[0] ?? "";
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, url });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
     try {
-      await navigator.share?.({ title, url });
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard_unavailable");
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
     } catch {
-      await navigator.clipboard?.writeText(url);
+      window.prompt("Холбоосыг хуулж аваарай", url);
     }
   }
   return (
-    <button
-      type="button"
-      aria-label="Share recipe"
-      onClick={() => share()}
+    <button type="button" aria-label={copied ? "Холбоос хуулагдсан" : "Жорын холбоос хуваалцах"}
+      title={copied ? "Хуулагдлаа" : "Хуваалцах"}
+      onClick={() => void share()}
       className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm touch-manipulation"
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"
-          stroke="white"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <path
-          d="M16 6l-4-4-4 4M12 2v13"
-          stroke="white"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+      {copied ? <span className="text-sm font-bold text-white" aria-hidden>✓</span> : (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"
+            stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+          <path d="M16 6l-4-4-4 4M12 2v13" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )}
     </button>
   );
 }
@@ -81,7 +80,7 @@ export function RecipeDetailHero({ data }: { data: RecipeDetail }) {
       >
         <button
           type="button"
-          aria-label="Back"
+          aria-label="Буцах"
           onClick={() => router.back()}
           className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-md touch-manipulation"
         >
