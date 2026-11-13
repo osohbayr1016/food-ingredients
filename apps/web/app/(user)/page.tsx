@@ -6,7 +6,7 @@ import type { RecipeListItem } from "@/lib/types";
 import { Suspense } from "react";
 
 const journeys = [
-  { href: "/pantry", icon: "🥕", title: "Байгаа орцоороо", detail: "Хөргөгчиндөө байгаа орцоор хоол олох", color: "bg-[#eef4e7]" },
+  { href: "/pantry", icon: "🥕", title: "Орцоороо хоол олох", detail: "Хөргөгчиндөө байгаа орцоор хоол олох", color: "bg-[#eef4e7]" },
   { href: "/?max_cook_time=30#recipe-list-heading", icon: "⏱", title: "Хурдан хоол", detail: "30 минут хүртэлх жорууд", color: "bg-[#fff3df]" },
   { href: "/discover", icon: "🍲", title: "Бүх жор", detail: "Өдөр бүр шинэ санаа хайх", color: "bg-[#f7eae5]" },
 ];
@@ -88,19 +88,6 @@ export default async function HomePage({
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-[#276440]">
           <Link href="/plan" className="hover:underline">7 хоногийн хоолны план →</Link>
           <Link href="/profile" className="hover:underline">Миний зорилго →</Link>
-        </div>
-      </section>
-
-      <section className="rounded-[28px] border border-[#e4eadd] bg-[#f8faf4] p-6 sm:p-8">
-        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#608a59]">Миний хөргөгч</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#203b2d]">Орцоо бичээд, тохирох хоолоо олоорой</h2>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#5d6c60]">Өндөг, төмс, лууван, тахиа... Хэрэглэхэд хялбар орцын тохирлын систем аль хэдийн ажиллаж байна.</p>
-          </div>
-          <Link href="/pantry" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#24563b] px-6 text-sm font-bold text-white hover:bg-[#173f30]">
-            Хөргөгчөө нээх →
-          </Link>
         </div>
       </section>
 
