@@ -165,7 +165,8 @@ auth.get("/auth/me", async (c) => {
       .first<{ id: string; username: string; role: "user" | "admin" }>();
     if (!row) return c.json({ user: null });
     return c.json({ user: row });
-  } catch {
-    return c.json({ user: null });
+  } catch (error) {
+    console.error("auth/me",error);
+    return c.json({error:"auth_unavailable"},503);
   }
 });
