@@ -32,17 +32,16 @@ mePantry.put("/me/pantry",async c=>{
   const items=parseAccountPantry(body.items);
   if(!items) return c.json({error:"invalid_pantry_items"},400);
   try{
-    const result=await c.env.DB.prepare(
-      `INSERT INTO user_pantry_snapshots(user_id,items_json,revision)
-       VALUES (?,?,1)
-       ON CONFLICT(user_id) DO UPDATE SET
-         items_json=excluded.items_json,
-         revision=user_pantry_snapshots.revision+1,
-         updated_at=datetime('now')
-       WHERE user_pantry_snapshots.revision=?`
-    ).bind(jwt.sub,JSON.stringify(items),body.expected_revision).run();
-    if (!result.meta.changes) {
-      // Do not silently overwrite changes made on another device.
+    // A batch is transactional. Only revision zero may create a new cloud pantry;
+    // existing snapshots are updated using compare-and-swap revision checks.
+    const [insert,update]=await c.env.DB.batch([
+      c.env.DB.prepare(`INSERT OR IGNORE INTO user_pantry_snapshots(user_id,items_json,revision)
+        SELECT ?,?,1 WHERE ?=0`).bind(jwt.sub,JSON.stringify(items),body.expected_revision),
+      c.env.DB.prepare(`UPDATE user_pantry_snapshots
+        SET items_json=?,revision=revision+1,updated_at=datetime('now')
+        WHERE user_id=? AND revision=?`).bind(JSON.stringify(items),jwt.sub,body.expected_revision),
+    ]);
+    if (!(insert.meta.changes || update.meta.changes)) {
       return c.json({error:"pantry_conflict",message:"Reload cloud pantry before saving."},409);
     }
     const row=await c.env.DB.prepare(
