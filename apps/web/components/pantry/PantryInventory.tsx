@@ -49,10 +49,12 @@ export function PantryInventory() {
   const expiring = useMemo(() => items.filter(x => expiryStatus(x.expires_on, today) === "soon").length, [items, today]);
   const matchingItems = usable.filter(item => selectedIds.has(item.canonical_id)).slice(0,30);
   function toggleSelection(id: string) {
+    const active = new Set(usable.map(item => item.canonical_id));
     setSelectedIds(prev => {
-      const next = new Set(prev);
+      // Expired/removed items must not block a valid 30-slot selection.
+      const next = new Set([...prev].filter(itemId => active.has(itemId)));
       if (next.has(id)) next.delete(id);
-      else if (next.size < 30) next.add(id);
+      else if (active.has(id) && next.size < 30) next.add(id);
       return next;
     });
   }
@@ -143,7 +145,7 @@ export function PantryInventory() {
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <label className="flex min-w-0 items-center gap-3 text-sm font-semibold text-[#264632]">
                       <input type="checkbox" checked={selectedIds.has(item.canonical_id)}
-                        disabled={status === "expired" || (!selectedIds.has(item.canonical_id) && matchingItems.length >= 30)}
+                        disabled={(!selectedIds.has(item.canonical_id) && (status === "expired" || matchingItems.length >= 30))}
                         onChange={() => toggleSelection(item.canonical_id)}
                         aria-label={`${item.name} жор тааруулахад ашиглах`}
                         className="h-5 w-5 shrink-0 accent-[#276440]"/>
