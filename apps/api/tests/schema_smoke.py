@@ -4,7 +4,7 @@ import sqlite3
 root = pathlib.Path(__file__).resolve().parents[3]
 db = sqlite3.connect(":memory:")
 db.executescript((root / "apps/api/db/schema.sql").read_text())
-for file in ("0007_recipe_metadata.sql", "0008_auth_rate_limits.sql"):
+for file in ("0007_recipe_metadata.sql", "0008_auth_rate_limits.sql", "0009_recipe_search_indexes.sql"):
     content = (root / "apps/api/db" / file).read_text()
     db.executescript(content)
     db.executescript(content)  # must be safe to retry
