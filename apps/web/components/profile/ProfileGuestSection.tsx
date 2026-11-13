@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ProfileGuestIdentityForm } from "@/components/profile/ProfileGuestIdentityForm";
 import { ProfileNutritionGuest } from "@/components/profile/ProfileNutritionGuest";
+import { BrowserDataExport } from "@/components/profile/BrowserDataExport";
 import { RecipeGrid } from "@/components/recipe/RecipeGrid";
 import {
   readLikedIds,
@@ -80,6 +81,7 @@ export function ProfileGuestSection() {
         <div className="pt-4"><ProfileNutritionGuest /></div>
       </details>
 
+      <BrowserDataExport />
       <div className="flex divide-x divide-zinc-100 rounded-2xl border border-zinc-100 bg-zinc-50/80 py-4 text-center text-sm">
         <div className="flex flex-1 flex-col gap-0.5 px-2">
           <span className="text-lg font-bold text-zinc-900">—</span>

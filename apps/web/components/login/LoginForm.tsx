@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthContext";
+import { safeLoginDestination } from "@/lib/safeRedirect";
 
 const errMsg: Record<string, string> = {
   invalid_credentials: "Нэвтрэх нэр эсвэл нууц үг буруу байна.",
@@ -35,10 +36,7 @@ export function LoginForm({
     setBusy(true);
     try {
       await login(username, password);
-      const next =
-        typeof initialNext === "string" && initialNext.startsWith("/")
-          ? initialNext
-          : "/profile";
+      const next = safeLoginDestination(initialNext);
       router.replace(next);
       router.refresh();
     } catch (er) {

@@ -24,6 +24,12 @@ app.get("/health", async (c) => {
 });
 
 app.get("/health/ready", async (c) => {
+  c.header("Cache-Control","no-store");
+  if (!c.env.JWT_SECRET || c.env.JWT_SECRET.trim().length < 16 ||
+      !c.env.ADMIN_SECRET || c.env.ADMIN_SECRET.trim().length < 16 ||
+      !c.env.PUBLIC_ORIGINS?.trim()) {
+    return c.json({ok:false,configuration:"not_ready"},503);
+  }
   try {
     await c.env.DB.prepare("SELECT 1 FROM recipes LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM recipe_metadata LIMIT 1").all();

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ProfileNutritionAccount } from "@/components/profile/ProfileNutritionAccount";
 import { GuestFavoritesTransfer } from "@/components/profile/GuestFavoritesTransfer";
 import { AccountDataControls } from "@/components/profile/AccountDataControls";
+import { BrowserDataExport } from "@/components/profile/BrowserDataExport";
 import { RecipeGrid } from "@/components/recipe/RecipeGrid";
 import type { RecipeListItem } from "@/lib/types";
 
@@ -115,6 +116,7 @@ export function ProfileLibrarySection({
         Хоол хийсэн түүхээ үзэх
       </Link>
       <AccountDataControls username={user.username} />
+      <BrowserDataExport />
       {user.role === "admin" ? (
         <Link
           href="/admin"

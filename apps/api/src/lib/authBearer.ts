@@ -3,7 +3,10 @@ import type { Env } from "../bindings";
 import { verifyJwt, type JwtPayload } from "./jwtHs256";
 
 /** Reject tokens for deleted users, changed roles, and revoked sessions. */
-export async function bearerPayload(c: Context<{ Bindings: Env }>): Promise<JwtPayload | null> {
+export async function bearerPayload(
+  c: Context<{ Bindings: Env }>,
+  opts: { throwOnDatabaseError?: boolean } = {},
+): Promise<JwtPayload | null> {
   const hdr=c.req.header("Authorization");
   const token=hdr?.startsWith("Bearer ") ? hdr.slice(7).trim() : "";
   if(!token) return null;
@@ -18,6 +21,7 @@ export async function bearerPayload(c: Context<{ Bindings: Env }>): Promise<JwtP
     return payload;
   }catch(error){
     console.error("auth session DB unavailable",error);
+    if (opts.throwOnDatabaseError) throw error;
     return null;
   }
 }

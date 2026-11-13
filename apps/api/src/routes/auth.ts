@@ -8,6 +8,7 @@ import {
 import { signJwt } from "../lib/jwtHs256";
 import { hashPassword, verifyPassword } from "../lib/password";
 import { checkAuthRateLimit } from "../lib/authRateLimit";
+import { parseCredentials } from "../lib/authInput";
 
 const USER_RE = /^[a-zA-Z0-9_]{3,32}$/;
 const TTL_SEC = 60 * 60 * 24 * 14;
@@ -19,12 +20,9 @@ function jwtSecretOk(s: string | undefined): s is string {
 export const auth = new Hono<{ Bindings: Env }>();
 
 auth.post("/auth/register", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as {
-    username?: string;
-    password?: string;
-  } | null;
-  const username = body?.username?.trim() ?? "";
-  const password = body?.password ?? "";
+  const input=parseCredentials(await c.req.json().catch(()=>null));
+  if(!input)return c.json({error:"credentials_required"},400);
+  const {username,password}=input;
   if (!jwtSecretOk(c.env.JWT_SECRET)) {
     return c.json({ error: "server_misconfigured" }, 503);
   }
@@ -89,12 +87,9 @@ auth.post("/auth/register", async (c) => {
 });
 
 auth.post("/auth/login", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as {
-    username?: string;
-    password?: string;
-  } | null;
-  const username = body?.username?.trim().toLowerCase() ?? "";
-  const password = body?.password ?? "";
+  const input=parseCredentials(await c.req.json().catch(()=>null));
+  if(!input)return c.json({error:"credentials_required"},400);
+  const username=input.username.toLowerCase(), password=input.password;
   if (!jwtSecretOk(c.env.JWT_SECRET)) {
     return c.json({ error: "server_misconfigured" }, 503);
   }
@@ -176,9 +171,10 @@ auth.post("/auth/revoke-all", async c => {
 });
 
 auth.get("/auth/me", async (c) => {
-  const jwt = await bearerPayload(c);
-  if (!jwt) return c.json({ user: null });
+  c.header("Cache-Control","no-store");
   try {
+    const jwt = await bearerPayload(c,{throwOnDatabaseError:true});
+    if (!jwt) return c.json({user:null},401);
     const row = await c.env.DB.prepare(
       "SELECT id, username, role FROM users WHERE id = ?",
     )

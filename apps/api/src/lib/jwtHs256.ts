@@ -57,6 +57,9 @@ export async function verifyJwt(
   token: string,
   secret: string,
 ): Promise<JwtPayload | null> {
+  // Reject oversized / malformed input before HMAC or base64 processing.
+  if(typeof token!=="string" || token.length>4096 || !/^[A-Za-z0-9._-]+$/.test(token))
+    return null;
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [h, p, s] = parts;

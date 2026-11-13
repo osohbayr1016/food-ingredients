@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { bearerPayload } from "../lib/authBearer";
 import { verifyPassword } from "../lib/password";
+import { checkAuthRateLimit } from "../lib/authRateLimit";
 
 export const meData=new Hono<{Bindings:Env}>();
 
@@ -64,7 +65,7 @@ meData.delete("/me/account",async c=>{
   if(!jwt) return c.json({error:"unauthorized"},401);
   const body=await c.req.json().catch(()=>null) as {password?:unknown;confirm_username?:unknown}|null;
   if(typeof body?.password!=="string" || typeof body.confirm_username!=="string" ||
-     body.password.length<1 || body.password.length>1024)
+     body.password.length<1 || body.password.length>256 || body.confirm_username.length>32)
     return c.json({error:"confirmation_required"},400);
   try{
     const account=await c.env.DB.prepare(
@@ -74,6 +75,13 @@ meData.delete("/me/account",async c=>{
     if(account.role==="admin") return c.json({error:"admin_account_deletion_not_supported"},403);
     if(body.confirm_username.trim().toLowerCase()!==account.username.toLowerCase())
       return c.json({error:"username_confirmation_mismatch"},400);
+    // Rate-limit by account ID, not only IP, to prevent password-guessing from
+    // many networks using a stolen but still-valid bearer token.
+    const limit=await checkAuthRateLimit(c.env.DB,jwt.sub,"delete_account",c.env.JWT_SECRET);
+    if(!limit.allowed){
+      c.header("Retry-After",String(limit.retryAfter));
+      return c.json({error:"rate_limited"},429);
+    }
     if(!(await verifyPassword(body.password,account.password_hash)))
       return c.json({error:"invalid_password"},401);
     // FK ON DELETE CASCADE removes saved, history, likes, nutrition, pantry.
