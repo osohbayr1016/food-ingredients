@@ -28,6 +28,7 @@ export async function fetchAdminRecipes(token: string) {
 }
 
 export type AdminRecipeDetail = {
+  metadata?: Record<string, unknown>;
   recipe: Record<string, unknown>;
   ingredients: Record<string, unknown>[];
   steps: Record<string, unknown>[];

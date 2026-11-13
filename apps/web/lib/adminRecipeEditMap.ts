@@ -55,8 +55,23 @@ export function adminDetailToPayload(detail: AdminRecipeDetail): RecipePatchPayl
     tip: row.tip != null && String(row.tip).trim() ? String(row.tip) : null,
   }));
 
+  const meta = detail.metadata ?? {};
+  const metadata = {
+    source_url: typeof meta.source_url === "string" ? meta.source_url : null,
+    license_name: typeof meta.license_name === "string" ? meta.license_name : null,
+    video_url: typeof meta.video_url === "string" ? meta.video_url : null,
+    review_status: meta.review_status === "approved" ? "approved" as const : "pending" as const,
+    allergen_status: meta.allergen_status === "ingredients_reviewed" ? "ingredients_reviewed" as const : "unknown" as const,
+    allergens: Array.isArray(meta.allergens) ? meta.allergens.filter((v): v is string => typeof v === "string") : [],
+    nutrition_source: typeof meta.nutrition_source === "string" ? meta.nutrition_source : null,
+    calories_kcal: typeof meta.calories_kcal === "number" ? meta.calories_kcal : null,
+    protein_g: typeof meta.protein_g === "number" ? meta.protein_g : null,
+    carbs_g: typeof meta.carbs_g === "number" ? meta.carbs_g : null,
+    fat_g: typeof meta.fat_g === "number" ? meta.fat_g : null,
+  };
   return {
     recipe,
+    metadata,
     ingredients,
     steps,
     tag_ids: detail.tag_ids?.length ? [...detail.tag_ids] : [],
