@@ -1,5 +1,5 @@
 import { CookingExperience } from "@/components/cooking/CookingExperience";
-import { serverGetJson } from "@/lib/serverFetch";
+import { ApiHttpError, serverGetJson } from "@/lib/serverFetch";
 import type { RecipeDetail } from "@/lib/types";
 import { notFound } from "next/navigation";
 
@@ -13,11 +13,12 @@ export default async function CookPage(props: {
   const servesParam = typeof raw === "string" ? Number(raw) : undefined;
   try {
     const detail = await serverGetJson<RecipeDetail>(`/recipes/${id}`);
-    const serves = servesParam && !Number.isNaN(servesParam)
-      ? Math.max(1, servesParam)
-      : Math.max(1, Number(detail.recipe.serves) || 1);
+    const serves = typeof servesParam === "number" && Number.isSafeInteger(servesParam)
+      && servesParam >= 1 && servesParam <= 30
+      ? servesParam : Math.max(1, Math.min(30, Number(detail.recipe.serves) || 1));
     return <CookingExperience data={detail} serves={serves} />;
-  } catch {
-    notFound();
+  } catch (error) {
+    if (error instanceof ApiHttpError && error.status === 404) notFound();
+    throw error;
   }
 }
