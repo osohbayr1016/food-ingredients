@@ -5,9 +5,11 @@ import { RecipeGrid } from "@/components/recipe/RecipeGrid";
 import { serverGetJson } from "@/lib/serverFetch";
 import type { RecipeListItem } from "@/lib/types";
 
-export default async function DiscoverPage() {
+export default async function DiscoverPage({ searchParams }: { searchParams?: Promise<{ page?: string }> }) {
+  const params = await searchParams;
+  const page = Math.min(1000, Math.max(1, Number(params?.page || 1) || 1));
   const [food, cuisinesRes] = await Promise.all([
-    serverGetJson<{ recipes: RecipeListItem[] }>(`/recipes`),
+    serverGetJson<{ recipes: RecipeListItem[]; pagination?: { has_more: boolean } }>(`/recipes?page=${page}`),
     serverGetJson<{ cuisines: { name: string; recipe_count: number }[] }>(`/cuisines`),
   ]);
 
@@ -17,8 +19,8 @@ export default async function DiscoverPage() {
         <p className="text-xs font-semibold uppercase tracking-wide text-(--figma-primary)">
           Discover
         </p>
-        <h1 className="text-2xl font-bold text-zinc-900">Explore</h1>
-        <p className="text-sm text-zinc-500">Browse cuisines and trending recipes.</p>
+        <h1 className="text-2xl font-bold text-zinc-900">Хоолны сан</h1>
+        <p className="text-sm text-zinc-500">Улс, бүс, орц болон өөрийн сонирхлоор жор үзэх.</p>
       </header>
       <DiscoverOccasionCards />
       <section className="space-y-3">
@@ -40,17 +42,22 @@ export default async function DiscoverPage() {
           href="/cuisines"
           className="block text-center text-sm font-semibold text-(--figma-primary)"
         >
-          All categories →
+          Бүх ангилал →
         </Link>
       </section>
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-zinc-900">Most popular</h2>
+          <h2 className="text-lg font-bold text-zinc-900">Сүүлд нэмэгдсэн</h2>
           <Link href="/search" className="text-xs font-semibold text-(--figma-primary)">
             Search
           </Link>
         </div>
         <RecipeGrid recipes={food.recipes} />
+        <nav aria-label="Хоолны хуудас" className="flex items-center justify-center gap-4 py-4 text-sm font-semibold">
+          {page > 1 && <Link href={`/discover?page=${page - 1}`} className="rounded-xl border border-zinc-200 px-4 py-2">← Өмнөх</Link>}
+          <span className="text-zinc-500">{page}-р хуудас</span>
+          {food.pagination?.has_more && <Link href={`/discover?page=${page + 1}`} className="rounded-xl bg-(--figma-primary) px-4 py-2 text-white">Дараагийн →</Link>}
+        </nav>
       </section>
     </main>
   );

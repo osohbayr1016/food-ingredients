@@ -34,7 +34,22 @@ export type StepRow = {
   tip?: string | null;
 };
 
+export type RecipeMetadata = {
+  source_url?: string | null;
+  license_name?: string | null;
+  video_url?: string | null;
+  review_status?: "pending" | "approved";
+  allergen_status?: "unknown" | "ingredients_reviewed";
+  allergens?: string[];
+  nutrition_source?: string | null;
+  calories_kcal?: number | null;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
+};
+
 export type RecipePatchPayload = {
+  metadata?: RecipeMetadata;
   recipe: RecipeRow;
   ingredients: IngRow[];
   steps: StepRow[];

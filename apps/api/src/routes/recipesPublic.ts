@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../bindings";
+import { ALLERGEN_CODES, metadataFromRow } from "../lib/recipeMetadata";
 
 export const recipes = new Hono<{ Bindings: Env }>();
 
@@ -30,7 +31,18 @@ recipes.get("/recipes", async (c) => {
   const difficulty = c.req.query("difficulty");
   const maxCook = c.req.query("max_cook_time");
   const tag = c.req.query("tag");
-  const query = c.req.query("q")?.trim().toLowerCase();
+  const query = c.req.query("q")?.trim().toLowerCase().slice(0, 100);
+  const page = Number(c.req.query("page") || 1);
+  const pageSize = Number(c.req.query("page_size") || 36);
+  if (!Number.isSafeInteger(page) || page < 1 || page > 1000 ||
+      !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100) {
+    return c.json({ error: "invalid_pagination" }, 400);
+  }
+  const excludedRaw = c.req.query("exclude_allergens")?.trim();
+  const excluded = excludedRaw ? [...new Set(excludedRaw.split(",").filter(Boolean))] : [];
+  if (excluded.some(code => !ALLERGEN_CODES.includes(code as typeof ALLERGEN_CODES[number]))) return c.json({ error: "invalid_allergen" }, 400);
+  const maxKcalRaw = c.req.query("max_calories");
+  const minProteinRaw = c.req.query("min_protein");
 
   const where = ["r.is_published = 1"];
   const params: (string | number)[] = [];
@@ -50,6 +62,26 @@ recipes.get("/recipes", async (c) => {
       params.push(maxMinutes);
     }
   }
+  // Allergens: only ingredient-reviewed recipes qualify, never unreviewed recipes.
+  if (excluded.length) {
+    const placeholders = excluded.map(() => "?").join(",");
+    where.push(`EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id
+      AND m.review_status='approved' AND m.allergen_status='ingredients_reviewed'
+      AND NOT EXISTS (SELECT 1 FROM json_each(m.allergens_json) a WHERE a.value IN (${placeholders})))`);
+    params.push(...excluded);
+  }
+  if (maxKcalRaw) {
+    const maxKcal = Number(maxKcalRaw);
+    if (!Number.isFinite(maxKcal) || maxKcal <= 0 || maxKcal > 10000) return c.json({ error: "invalid_max_calories" }, 400);
+    where.push("EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id AND m.review_status='approved' AND m.nutrition_source IS NOT NULL AND m.calories_kcal <= ?)");
+    params.push(maxKcal);
+  }
+  if (minProteinRaw) {
+    const minProtein = Number(minProteinRaw);
+    if (!Number.isFinite(minProtein) || minProtein < 0 || minProtein > 1000) return c.json({ error: "invalid_min_protein" }, 400);
+    where.push("EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id AND m.nutrition_source IS NOT NULL AND m.protein_g >= ?)");
+    params.push(minProtein);
+  }
   if (query) {
     const terms = [query, ...(ingredientSearchAliases[query] ?? [])];
     where.push(`(${terms.map(() => "(lower(r.title) LIKE ? OR r.id IN (SELECT recipe_id FROM ingredients WHERE lower(name) LIKE ?))").join(" OR ")})`);
@@ -64,10 +96,13 @@ recipes.get("/recipes", async (c) => {
              JOIN tags tg ON tg.id = rt.tag_id AND tg.name = ?`;
     params.unshift(tag);
   }
-  sql += ` WHERE ${where.join(" AND ")} ORDER BY r.created_at DESC`;
-  const stmt = c.env.DB.prepare(sql).bind(...params);
+  sql += ` WHERE ${where.join(" AND ")} ORDER BY r.created_at DESC, r.id ASC LIMIT ? OFFSET ?`;
+  const stmt = c.env.DB.prepare(sql).bind(...params, pageSize + 1, (page - 1) * pageSize);
   const { results } = await stmt.all();
-  return c.json({ recipes: results ?? [] });
+  const rows = results ?? [];
+  return c.json({ recipes: rows.slice(0, pageSize), pagination: {
+    page, page_size: pageSize, has_more: rows.length > pageSize,
+  } });
 });
 
 recipes.get("/recipes/:id", async (c) => {
@@ -93,6 +128,9 @@ recipes.get("/recipes/:id", async (c) => {
     .bind(id)
     .all();
 
+  const metadataRow = await c.env.DB.prepare("SELECT * FROM recipe_metadata WHERE recipe_id = ?")
+    .bind(id).first<Record<string, unknown>>();
+
   const tags = await c.env.DB.prepare(
     `SELECT t.id, t.name FROM recipe_tags rt JOIN tags t ON t.id = rt.tag_id
      WHERE rt.recipe_id = ?`,
@@ -105,5 +143,6 @@ recipes.get("/recipes/:id", async (c) => {
     ingredients: ingredients.results ?? [],
     steps: steps.results ?? [],
     tags: tags.results ?? [],
+    metadata: metadataFromRow(metadataRow),
   });
 });

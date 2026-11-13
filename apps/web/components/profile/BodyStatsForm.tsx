@@ -27,8 +27,8 @@ const GOAL_OPTS: { value: NutritionGoal; label: string }[] = [
   { value: "maintain", label: "Жингээ хадгалах" },
   { value: "cut_mild", label: "Жингээ бага зэрэг бууруулах" },
   { value: "cut_mod", label: "Жингээ бууруулах" },
-  { value: "lean_gain", label: "Өсөх (туранхай)" },
-  { value: "gain", label: "Өөдгүй өсөлт" },
+  { value: "lean_gain", label: "Булчингийн жин нэмэх" },
+  { value: "gain", label: "Жин нэмэх" },
 ];
 
 export function BodyStatsForm({
@@ -73,10 +73,10 @@ export function BodyStatsForm({
           </select>
         </label>
         <label className="block space-y-1 text-sm">
-          <span className="font-medium text-zinc-800">Нас (14–100)</span>
+          <span className="font-medium text-zinc-800">Нас (18–100)</span>
           <input
             type="number"
-            min={14}
+            min={18}
             max={100}
             className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-zinc-900"
             value={value.age_years}
@@ -137,6 +137,7 @@ export function BodyStatsForm({
           </select>
         </label>
       </div>
+      <p className="text-xs leading-relaxed text-zinc-500">Илчлэгийн тооцоо нь 18-аас дээш насныханд зориулсан ерөнхий ойролцоо тооцоо. Жин хэт бага бол турах зорилго санал болгохгүй.</p>
       {error ? (
         <p className="text-sm font-medium text-red-600">{error}</p>
       ) : null}

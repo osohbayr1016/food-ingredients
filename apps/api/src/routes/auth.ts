@@ -7,6 +7,7 @@ import {
 } from "../lib/d1Errors";
 import { signJwt } from "../lib/jwtHs256";
 import { hashPassword, verifyPassword } from "../lib/password";
+import { checkAuthRateLimit } from "../lib/authRateLimit";
 
 const USER_RE = /^[a-zA-Z0-9_]{3,32}$/;
 const TTL_SEC = 60 * 60 * 24 * 14;
@@ -26,6 +27,17 @@ auth.post("/auth/register", async (c) => {
   const password = body?.password ?? "";
   if (!jwtSecretOk(c.env.JWT_SECRET)) {
     return c.json({ error: "server_misconfigured" }, 503);
+  }
+  try {
+    const limit = await checkAuthRateLimit(c.env.DB, c.req.header("CF-Connecting-IP") || "unknown",
+      "register", c.env.JWT_SECRET);
+    if (!limit.allowed) {
+      c.header("Retry-After", String(limit.retryAfter));
+      return c.json({ error: "rate_limited" }, 429);
+    }
+  } catch (error) {
+    console.error("auth rate-limit unavailable", error);
+    return c.json({ error: "auth_unavailable" }, 503);
   }
   if (!USER_RE.test(username)) {
     return c.json({ error: "invalid_username" }, 400);
@@ -85,6 +97,17 @@ auth.post("/auth/login", async (c) => {
   const password = body?.password ?? "";
   if (!jwtSecretOk(c.env.JWT_SECRET)) {
     return c.json({ error: "server_misconfigured" }, 503);
+  }
+  try {
+    const limit = await checkAuthRateLimit(c.env.DB, c.req.header("CF-Connecting-IP") || "unknown",
+      "login", c.env.JWT_SECRET);
+    if (!limit.allowed) {
+      c.header("Retry-After", String(limit.retryAfter));
+      return c.json({ error: "rate_limited" }, 429);
+    }
+  } catch (error) {
+    console.error("auth rate-limit unavailable", error);
+    return c.json({ error: "auth_unavailable" }, 503);
   }
   if (!username || !password) {
     return c.json({ error: "credentials_required" }, 400);

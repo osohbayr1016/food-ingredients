@@ -85,7 +85,7 @@ themealdbImportAdmin.post("/import/themealdb/commit", async (c) => {
   } | null;
   const idMeal = body?.idMeal?.trim() ?? "";
   if (!idMeal) return c.json({ error: "missing_idMeal" }, 400);
-  const publish = body?.publish === true;
+  if (body?.publish === true) return c.json({ error: "review_before_publishing" }, 400);
   const skipImage = body?.skip_image === true;
 
   let meal;
@@ -105,7 +105,15 @@ themealdbImportAdmin.post("/import/themealdb/commit", async (c) => {
     return c.json({ error: "duplicate_external", recipe_id: existing }, 409);
 
   const patch = mealToRecipePatch(meal, { embedRemoteThumbUrlInTips: false });
-  patch.recipe.is_published = publish;
+  patch.recipe.is_published = false;
+  patch.metadata = {
+    source_url: "https://www.themealdb.com/",
+    license_name: "TheMealDB — source attribution required",
+    video_url: String(meal.strYoutube ?? "").trim() || null,
+    review_status: "pending",
+    allergen_status: "unknown",
+    allergens: [],
+  };
 
   const recipeId = crypto.randomUUID();
   await insertRecipe(c.env.DB, recipeId, patch);

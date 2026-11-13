@@ -47,6 +47,33 @@ jobs:
             exit 1
           fi
 
+      - name: Apply additive D1 recipe metadata migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0007_recipe_metadata.sql --yes
+
+      - name: Apply additive D1 authentication rate limit migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0008_auth_rate_limits.sql --yes
+
+      - name: Apply recipe query optimization indexes
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0009_recipe_search_indexes.sql --yes
+
       - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v3
         with:
@@ -67,3 +94,12 @@ jobs:
           wranglerVersion: "4"
           packageManager: pnpm
           command: deploy
+
+      - name: Smoke test production API
+        run: |
+          curl --fail --silent --show-error --retry 6 --retry-delay 5 --retry-all-errors \
+            https://food-ingredients-api.osohoo691016.workers.dev/health/ready
+      - name: Smoke test production homepage
+        run: |
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 5 --retry-all-errors \
+            --output /dev/null https://food-ingredients-web.osohoo691016.workers.dev/

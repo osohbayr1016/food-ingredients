@@ -1,3 +1,4 @@
+import type { RecipeMetadata } from "./recipeMetadata";
 export type RecipeListItem = {
   id: string;
   title: string;
@@ -45,4 +46,5 @@ export type RecipeDetail = {
   ingredients: IngredientRow[];
   steps: StepRow[];
   tags: TagRow[];
+  metadata?: RecipeMetadata;
 };

@@ -21,6 +21,10 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - name: Database migration smoke test
+        run: python3 apps/api/tests/schema_smoke.py
+      - name: Pure API unit tests
+        run: node --experimental-strip-types --test apps/api/tests/recipe_safety.test.mjs
       - name: API typecheck
         run: pnpm --filter api exec tsc --noEmit
       - name: API Wrangler dry-run bundle

@@ -58,12 +58,15 @@ const GOAL_PROTEIN_PER_KG: Record<NutritionGoal, [number, number]> = {
 
 export function validateBodyStats(b: BodyStatsInput): string | null {
   if (b.sex !== "male" && b.sex !== "female") return "invalid_sex";
-  if (!Number.isFinite(b.age_years) || b.age_years < 14 || b.age_years > 100)
+  if (!Number.isFinite(b.age_years) || b.age_years < 18 || b.age_years > 100)
     return "invalid_age";
   if (!Number.isFinite(b.height_cm) || b.height_cm < 100 || b.height_cm > 250)
     return "invalid_height";
   if (!Number.isFinite(b.weight_kg) || b.weight_kg < 30 || b.weight_kg > 300)
     return "invalid_weight";
+  const bmi = b.weight_kg / Math.pow(b.height_cm / 100, 2);
+  if (Number.isFinite(bmi) && bmi < 18.5 && (b.goal === "cut_mild" || b.goal === "cut_mod"))
+    return "restrictive_goal_not_supported_at_low_weight";
   if (!Object.prototype.hasOwnProperty.call(ACTIVITY, b.activity_level))
     return "invalid_activity";
   if (!Object.prototype.hasOwnProperty.call(GOAL_KCAL_DELTA, b.goal))
@@ -86,7 +89,7 @@ export function computeTargets(input: BodyStatsInput): NutritionTargets {
   const bmr = roundKcal(base);
   const mult = ACTIVITY[input.activity_level];
   const tdee = roundKcal(base * mult);
-  const target_kcal = Math.max(800, roundKcal(tdee + GOAL_KCAL_DELTA[input.goal]));
+  const target_kcal = Math.max(input.sex === "male" ? 1500 : 1200, roundKcal(tdee + GOAL_KCAL_DELTA[input.goal]));
   const [pl, ph] = GOAL_PROTEIN_PER_KG[input.goal];
   const protein_g_low = Math.round(w * pl);
   const protein_g_high = Math.round(w * ph);
