@@ -23,6 +23,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: API typecheck
         run: pnpm --filter api exec tsc --noEmit
+      - name: API Wrangler dry-run bundle
+        run: pnpm --filter api exec wrangler deploy --dry-run
       - name: Web typecheck
         run: pnpm --filter web exec tsc --noEmit
       - name: Web lint
