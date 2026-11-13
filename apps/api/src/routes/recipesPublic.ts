@@ -79,7 +79,7 @@ recipes.get("/recipes", async (c) => {
   if (minProteinRaw) {
     const minProtein = Number(minProteinRaw);
     if (!Number.isFinite(minProtein) || minProtein < 0 || minProtein > 1000) return c.json({ error: "invalid_min_protein" }, 400);
-    where.push("EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id AND m.nutrition_source IS NOT NULL AND m.protein_g >= ?)");
+    where.push("EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id AND m.review_status='approved' AND m.nutrition_source IS NOT NULL AND m.protein_g >= ?)");
     params.push(minProtein);
   }
   if (query) {
