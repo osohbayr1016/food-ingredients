@@ -53,6 +53,10 @@ db.execute("INSERT INTO user_pantry_snapshots(user_id,items_json) VALUES('user-s
 result=db.execute("UPDATE user_pantry_snapshots SET items_json='[1]',revision=revision+1 WHERE user_id='user-sync' AND revision=1")
 assert result.rowcount == 1
 assert db.execute("UPDATE user_pantry_snapshots SET revision=revision+1 WHERE user_id='user-sync' AND revision=1").rowcount == 0
+db.execute("INSERT INTO user_session_versions(user_id,version) VALUES('user-sync',0)")
+db.execute("UPDATE user_session_versions SET version=version+1 WHERE user_id='user-sync'")
+assert db.execute("SELECT version FROM user_session_versions WHERE user_id='user-sync'").fetchone()[0]==1
 db.execute("DELETE FROM users WHERE id='user-sync'")
 assert not db.execute("SELECT 1 FROM user_pantry_snapshots WHERE user_id='user-sync'").fetchone()
+assert not db.execute("SELECT 1 FROM user_session_versions WHERE user_id='user-sync'").fetchone()
 print("D1-compatible schema & migrations: smoke test passed")

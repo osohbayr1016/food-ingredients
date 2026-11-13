@@ -126,6 +126,15 @@ jobs:
           packageManager: pnpm
           command: d1 execute food-ingredients --remote --file=db/0015_user_pantry_snapshots.sql --yes
 
+      - name: Apply user session revocation migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0016_session_revocation.sql --yes
+
       - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v3
         with:

@@ -114,7 +114,10 @@ auth.post("/auth/login", async (c) => {
   }
   try {
     const row = await c.env.DB.prepare(
-      "SELECT id, username, password_hash, role FROM users WHERE username = ? COLLATE NOCASE",
+      `SELECT u.id,u.username,u.password_hash,u.role,
+      COALESCE(s.version,0) AS session_version FROM users u
+      LEFT JOIN user_session_versions s ON s.user_id=u.id
+      WHERE u.username=? COLLATE NOCASE`,
     )
       .bind(username)
       .first<{
@@ -122,12 +125,13 @@ auth.post("/auth/login", async (c) => {
         username: string;
         password_hash: string;
         role: "user" | "admin";
+        session_version: number;
       }>();
     if (!row || !(await verifyPassword(password, row.password_hash))) {
       return c.json({ error: "invalid_credentials" }, 401);
     }
     const token = await signJwt(
-      { sub: row.id, role: row.role },
+      { sub: row.id, role: row.role, ver: row.session_version },
       c.env.JWT_SECRET,
       TTL_SEC,
     );
@@ -151,6 +155,23 @@ auth.post("/auth/login", async (c) => {
     }
     console.error("auth/login", e);
     return c.json({ error: "login_failed" }, 500);
+  }
+});
+
+/** Revoke all existing sessions for this user on explicit request. */
+auth.post("/auth/revoke-all", async c => {
+  const jwt=await bearerPayload(c);
+  if(!jwt) return c.json({error:"unauthorized"},401);
+  try{
+    await c.env.DB.prepare(
+      `INSERT INTO user_session_versions(user_id,version)
+       VALUES (?,1) ON CONFLICT(user_id) DO UPDATE SET
+       version=user_session_versions.version+1,updated_at=datetime('now')`
+    ).bind(jwt.sub).run();
+    return c.json({ok:true});
+  }catch(error){
+    console.error("auth/revoke-all",error);
+    return c.json({error:"session_revoke_failed"},503);
   }
 });
 
