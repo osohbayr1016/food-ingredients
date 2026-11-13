@@ -12,12 +12,13 @@ export function TimerBubbleRow({
   onDismiss: (id: string) => void;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-full bg-zinc-900/90 px-4 py-2 border border-white/10 text-xs">
+    <div className={`flex items-center justify-between rounded-2xl border px-4 py-2 text-xs ${text === "Дууссан" ? "border-amber-400/50 bg-amber-950 text-amber-100" : "border-white/10 bg-zinc-900/90 text-zinc-50"}`}>
       <span className="truncate pr-3">{timer.label}</span>
-      <span className="font-semibold">{text}</span>
+      <span className="font-semibold" role={text === "Дууссан" ? "status" : undefined}>{text}</span>
       <button
         type="button"
         onClick={() => onDismiss(timer.id)}
+        aria-label={`${timer.label} таймерийг арилгах`}
         className="ml-2 text-zinc-500 touch-manipulation"
       >
         ×
