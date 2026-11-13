@@ -41,6 +41,7 @@ const norm = (s: string) => s.trim().toLowerCase().replace(/\.$/, "");
 export function convertQuantity(value: number, from: string, to: string): number | null {
   if (!Number.isFinite(value) || value < 0) return null;
   const a = norm(from), b = norm(to);
+  if (!a || !b) return null;
   if (a === b) return value;
   const au = UNITS[a], bu = UNITS[b];
   if (!au || !bu || au.kind !== bu.kind) return null;
