@@ -36,6 +36,7 @@ export function validateRecipePatch(value: unknown): string[] {
   }
   if (r.is_published === true || r.is_published === 1) {
     if (p.metadata?.review_status !== "approved") errors.push("publish_requires_editorial_approval");
+    if (!p.metadata?.license_name?.trim()) errors.push("publish_requires_content_rights");
     if (p.ingredients.length < 2) errors.push("publish_requires_ingredients");
     if (p.steps.length < 2) errors.push("publish_requires_steps");
     if (!Number.isFinite(r.prep_time + r.cook_time) || r.prep_time + r.cook_time <= 0) errors.push("publish_requires_known_time");
