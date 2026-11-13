@@ -12,6 +12,7 @@ import { saved } from "./routes/saved";
 import { admin } from "./routes/admin";
 import { meNutrition } from "./routes/meNutrition";
 import { mePantry } from "./routes/mePantry";
+import { meData } from "./routes/meData";
 import { importDailyCandidate } from "./lib/dailyRecipeImport";
 import { publishOneApprovedRecipe } from "./lib/dailyApprovedPublish";
 
@@ -47,6 +48,7 @@ app.route("/", likes);
 app.route("/", saved);
 app.route("/", meNutrition);
 app.route("/", mePantry);
+app.route("/", meData);
 app.route("/", admin);
 
 export default {
