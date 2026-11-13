@@ -21,8 +21,12 @@ recipes.get("/recipes", async (c) => {
     params.push(Number(difficulty));
   }
   if (maxCook) {
-    where.push("r.cook_time <= ?");
-    params.push(Number(maxCook));
+    const maxMinutes = Number(maxCook);
+    if (Number.isSafeInteger(maxMinutes) && maxMinutes > 0 && maxMinutes <= 1440) {
+      // Zero-valued imported times mean unknown, not "instant".
+      where.push("(r.prep_time + r.cook_time) > 0 AND (r.prep_time + r.cook_time) <= ?");
+      params.push(maxMinutes);
+    }
   }
   if (query) {
     where.push(
