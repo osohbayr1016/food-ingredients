@@ -39,6 +39,7 @@ export function SearchView({ initialQ }: { initialQ: string }) {
   const maxCalories = params?.get("max_calories") ?? "";
   const minProtein = params?.get("min_protein") ?? "";
   const filtersKey = [allergens,maxCalories,minProtein].join("|");
+  const [advancedOpen,setAdvancedOpen] = useState(() => Boolean(allergens || maxCalories || minProtein));
 
   useEffect(() => { setQuery(initialQ); }, [initialQ]);
 
@@ -158,7 +159,7 @@ export function SearchView({ initialQ }: { initialQ: string }) {
             className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${easy
               ? "bg-[#276440] text-white" : "border border-[#e0e9db] bg-white text-[#366546] hover:bg-[#eff6ea]"}`}>Хялбар</button>
         </div>
-        <details defaultOpen={Boolean(allergens || maxCalories || minProtein)}
+        <details open={advancedOpen} onToggle={event=>setAdvancedOpen(event.currentTarget.open)}
           className="rounded-2xl border border-[#e0e9db] bg-white p-4">
           <summary className="cursor-pointer text-sm font-semibold text-[#356a46]">
             Харшил, уураг, илчлэгээр шүүх (сонголтоор)
