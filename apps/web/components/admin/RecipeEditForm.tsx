@@ -119,11 +119,17 @@ export function RecipeEditForm({ recipeId }: Props) {
       <RecipeIngredientsEditor
         ingredients={payload.ingredients}
         categories={categories}
-        onChange={(ingredients) => setPayload({ ...payload, ingredients })}
+        onChange={(ingredients) => setPayload({
+          ...payload, ingredients,
+          metadata: { ...payload.metadata, review_status: "pending", allergen_status: "unknown" },
+        })}
       />
       <RecipeStepsEditor
         steps={payload.steps}
-        onChange={(steps) => setPayload({ ...payload, steps })}
+        onChange={(steps) => setPayload({
+          ...payload, steps,
+          metadata: { ...payload.metadata, review_status: "pending" },
+        })}
       />
       <RecipeTagsPicker
         tags={tags}
