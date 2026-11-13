@@ -99,6 +99,23 @@ export function CookingExperience({
     });
   }, [pulse, remaining, timers]);
 
+  function restartCooking() {
+    if (timers.length && !window.confirm("Ажиллаж буй таймеруудыг зогсоож шинээр эхлэх үү?")) return;
+    try {
+      localStorage.removeItem(sessionKey);
+      const prefix = `ing_ck_v2:${data.recipe.id}:${serves}:`;
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(prefix)) localStorage.removeItem(key);
+      }
+    } catch { /* in-memory reset still works */ }
+    bootstrap([]);
+    vibrated.current.clear();
+    setIndex(0);
+    setSheet(false);
+    setFinish(false);
+  }
+
   const total = steps.length;
 
   return (
@@ -111,6 +128,9 @@ export function CookingExperience({
       >
         ← Буцах
       </Link>
+      <button type="button" onClick={restartCooking}
+        className="fixed right-4 top-[calc(env(safe-area-inset-top)+12px)] z-50 rounded-full border border-white/25 bg-zinc-900/90 px-3 py-2 text-xs font-semibold text-white"
+        aria-label="Хоол хийхийг шинээр эхлүүлэх">Шинээр эхлэх</button>
       <CookingSlideDeck
         index={index}
         total={total}
@@ -145,6 +165,7 @@ export function CookingExperience({
         open={finish}
         recipeId={data.recipe.id}
         onClose={() => setFinish(false)}
+        onSaved={restartCooking}
       />
     </div>
   );
