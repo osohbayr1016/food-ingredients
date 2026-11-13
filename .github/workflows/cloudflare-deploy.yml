@@ -85,3 +85,12 @@ jobs:
           wranglerVersion: "4"
           packageManager: pnpm
           command: deploy
+
+      - name: Smoke test production API
+        run: |
+          curl --fail --silent --show-error --retry 6 --retry-delay 5 --retry-all-errors \
+            https://food-ingredients-api.osohoo691016.workers.dev/health/ready
+      - name: Smoke test production homepage
+        run: |
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 5 --retry-all-errors \
+            --output /dev/null https://food-ingredients-web.osohoo691016.workers.dev/

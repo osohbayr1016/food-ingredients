@@ -19,6 +19,18 @@ app.get("/health", async (c) => {
   await c.env.DB.prepare("SELECT 1 AS ok").first();
   return c.json({ ok: true });
 });
+
+app.get("/health/ready", async (c) => {
+  try {
+    await c.env.DB.prepare("SELECT 1 FROM recipes LIMIT 1").all();
+    await c.env.DB.prepare("SELECT 1 FROM recipe_metadata LIMIT 1").all();
+    await c.env.DB.prepare("SELECT 1 FROM auth_rate_limits LIMIT 1").all();
+    return c.json({ ok: true, database: "ready" });
+  } catch (error) {
+    console.error("health/ready", error);
+    return c.json({ ok: false, database: "not_ready" }, 503);
+  }
+});
 app.route("/", recipes);
 app.route("/", cuisines);
 app.route("/", recipeTagsPublic);

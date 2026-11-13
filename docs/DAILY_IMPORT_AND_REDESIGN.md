@@ -27,3 +27,12 @@ This is not a guarantee of new publicly visible recipes every day. A reliable da
 
 ## Safety
 Never infer allergen-free status from missing tags. Never invent protein/calories. Guidance for loss of appetite should not replace healthcare evaluation for persistent symptoms or unintended weight loss. Online recipe photos/videos require licensed use or linking/embedding permission.
+
+## Release gates for v2
+- Apply additive D1 migrations 0007 and 0008 before deploying the API Worker. The GitHub workflow includes both.
+- Set Cloudflare token in GitHub Actions secrets and Worker secrets for ADMIN_SECRET/JWT_SECRET in Cloudflare.
+- CI verifies API/web typechecks, ESLint, production build, pure safety tests and SQLite migration smoke tests.
+- The deploy job checks `/health/ready` and the production homepage after upload. A successful bundle is **not** proof of production correctness.
+- After deployment, manually verify login, cooking mode, pantry query, user preferences, media upload and a recipe preview on a mobile device.
+- All existing recipes without v2 editorial metadata display unknown allergen status. Do not silently backfill allergen-free status.
+- Rate limiting uses hashed IP fixed-window counters and adds D1 writes; confirm free-tier quotas before high-volume traffic.
