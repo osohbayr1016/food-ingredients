@@ -12,9 +12,14 @@ import { cuisineEmoji } from "@/lib/cuisineEmoji";
 import { interpolateStep } from "@/lib/interpolateStep";
 import { buildSubstitutionMap, type ScaleCtx } from "@/lib/ingredientScale";
 import type { RecipeDetail } from "@/lib/types";
+import { ALLERGEN_OPTIONS, embedVideoUrl } from "@/lib/recipeMetadata";
 import { useMemo, useState } from "react";
 
 export function RecipeDetailView({ data }: { data: RecipeDetail }) {
+  const meta = data.metadata;
+  const videoEmbed = embedVideoUrl(meta?.video_url);
+  const nutritionAvailable = Boolean(meta?.nutrition_source && [meta?.calories_kcal, meta?.protein_g, meta?.carbs_g, meta?.fat_g].some(v => v != null));
+  const allergens = (meta?.allergens ?? []).map(code => ALLERGEN_OPTIONS.find(([id]) => id === code)?.[1] ?? code);
   const base = Math.max(1, Number(data.recipe.serves) || 1);
   const [serves, setServes] = useState(base);
   const ctx: ScaleCtx = useMemo(
@@ -41,6 +46,50 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
       </p>
 
       <RecipeDetailGallery galleryRaw={data.recipe.gallery_r2_keys} />
+      {videoEmbed && (
+        <section className="space-y-3" aria-labelledby="video-guide-title">
+          <h2 id="video-guide-title" className="text-xl font-bold text-[#244934]">Видео заавар</h2>
+          <div className="aspect-video overflow-hidden rounded-2xl bg-zinc-900">
+            <iframe src={videoEmbed} title={`${data.recipe.title} видео заавар`}
+              className="h-full w-full" loading="lazy" referrerPolicy="strict-origin-when-cross-origin"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen />
+          </div>
+        </section>
+      )}
+      <section className="space-y-3" aria-label="Хоолны аюулгүй байдал ба шим тэжээл">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-bold">Харшлын мэдээлэл</p>
+          {meta?.allergen_status === "ingredients_reviewed" ? (
+            <>
+              <p className="mt-1">{allergens.length ? `Жорын орцонд: ${allergens.join(", ")}` : "Шалгасан орцын жагсаалтад 9 гол харшил үүсгэгч тэмдэглэгдээгүй."}</p>
+              <p className="mt-2 text-xs">Орцын жагсаалтын шалгалт нь харшилгүй гэсэн баталгаа биш. Шошго, солих орц, гал тогооны бохирдлыг шалгаарай.</p>
+            </>
+          ) : (
+            <p className="mt-1">Энэ жорын харшил үүсгэгч орцууд хараахан баталгаажаагүй. Харшилтай бол шууд аюулгүй гэж үзэж болохгүй.</p>
+          )}
+        </div>
+        {nutritionAvailable && (
+          <div className="rounded-2xl border border-[#dbe8d7] bg-[#f5faf2] p-4">
+            <h2 className="font-bold text-[#244934]">Шим тэжээл · нэг порц</h2>
+            <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              {([["calories_kcal","Илчлэг","ккал"],["protein_g","Уураг","г"],["carbs_g","Нүүрс ус","г"],["fat_g","Өөх тос","г"]] as const).map(([key,label,unit]) => (
+                meta?.[key] != null ? (
+                  <div key={key}><dt className="text-xs text-zinc-600">{label}</dt><dd className="mt-1 font-bold text-[#214934]">{meta[key]} {unit}</dd></div>
+                ) : null
+              ))}
+            </dl>
+            <p className="mt-3 text-xs text-zinc-600">Эх сурвалж: {meta?.nutrition_source}. Тэжээллэг чанар нь орц, брэнд, хоол хийх аргаар өөрчлөгдөж болно.</p>
+          </div>
+        )}
+        {meta?.source_url && (
+          <p className="text-xs text-zinc-600">
+            Жорын эх сурвалж: <a href={meta.source_url} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#276440] underline">Нээх</a>
+            {meta.license_name ? ` · ${meta.license_name}` : ""}
+          </p>
+        )}
+      </section>
+
 
       <RecipeDetailStatRow
         prepTime={data.recipe.prep_time}

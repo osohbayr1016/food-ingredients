@@ -27,7 +27,7 @@ export default async function HomePage({
 }) {
   const params = await searchParams;
   const query = new URLSearchParams();
-  for (const key of ["cuisine", "difficulty", "max_cook_time", "tag", "q"]) {
+  for (const key of ["cuisine", "difficulty", "max_cook_time", "tag", "q", "exclude_allergens", "max_calories", "min_protein"]) {
     const value = getParam(params, key);
     if (value) query.set(key, value);
   }
