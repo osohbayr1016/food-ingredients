@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../../bindings";
 import { insertRecipe } from "../../lib/applyRecipePatch";
-import { fetchRemoteImageToR2 } from "../../lib/fetchUrlToR2";
 import {
   findRecipeByImport,
   findRecipesByNormalizedTitle,
@@ -81,12 +80,10 @@ themealdbImportAdmin.post("/import/themealdb/commit", async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
     idMeal?: string;
     publish?: boolean;
-    skip_image?: boolean;
   } | null;
   const idMeal = body?.idMeal?.trim() ?? "";
   if (!idMeal) return c.json({ error: "missing_idMeal" }, 400);
   if (body?.publish === true) return c.json({ error: "review_before_publishing" }, 400);
-  const skipImage = body?.skip_image === true;
 
   let meal;
   try {
@@ -108,7 +105,7 @@ themealdbImportAdmin.post("/import/themealdb/commit", async (c) => {
   patch.recipe.is_published = false;
   patch.metadata = {
     source_url: "https://www.themealdb.com/",
-    license_name: "TheMealDB — source attribution required",
+    license_name: null, // external attribution is not evidence of reuse rights
     video_url: String(meal.strYoutube ?? "").trim() || null,
     review_status: "pending",
     allergen_status: "unknown",
@@ -118,15 +115,8 @@ themealdbImportAdmin.post("/import/themealdb/commit", async (c) => {
   const recipeId = crypto.randomUUID();
   await insertRecipe(c.env.DB, recipeId, patch);
 
-  const thumb = String(meal.strMealThumb ?? "").trim();
-  if (!skipImage && thumb.startsWith("https://")) {
-    const key = await fetchRemoteImageToR2(c.env, recipeId, thumb);
-    if (key) {
-      await c.env.DB.prepare("UPDATE recipes SET image_r2_key = ? WHERE id = ?")
-        .bind(key, recipeId)
-        .run();
-    }
-  }
+  // Do not copy third-party images into R2 without confirmed reuse rights.
+  // A reviewer can upload independently licensed media in the recipe editor.
 
   return c.json({ id: recipeId });
 });
