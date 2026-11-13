@@ -171,9 +171,10 @@ auth.post("/auth/revoke-all", async c => {
 });
 
 auth.get("/auth/me", async (c) => {
-  const jwt = await bearerPayload(c);
-  if (!jwt) return c.json({ user: null });
+  c.header("Cache-Control","no-store");
   try {
+    const jwt = await bearerPayload(c,{throwOnDatabaseError:true});
+    if (!jwt) return c.json({user:null},401);
     const row = await c.env.DB.prepare(
       "SELECT id, username, role FROM users WHERE id = ?",
     )
