@@ -54,19 +54,19 @@ recipes.get("/recipes", async (c) => {
   if (maxKcalRaw) {
     const maxKcal = Number(maxKcalRaw);
     if (!Number.isFinite(maxKcal) || maxKcal <= 0 || maxKcal > 10000) return c.json({ error: "invalid_max_calories" }, 400);
-    where.push("EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id AND m.review_status='approved' AND m.nutrition_source IS NOT NULL
+    where.push(`EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id AND m.review_status='approved' AND m.nutrition_source IS NOT NULL
       AND EXISTS(SELECT 1 FROM recipe_evidence ev WHERE ev.recipe_id=m.recipe_id
         AND length(trim(COALESCE(ev.nutrition_evidence_url,'')))>0)
-      AND m.calories_kcal <= ?)");
+      AND m.calories_kcal <= ?)`);
     params.push(maxKcal);
   }
   if (minProteinRaw) {
     const minProtein = Number(minProteinRaw);
     if (!Number.isFinite(minProtein) || minProtein < 0 || minProtein > 1000) return c.json({ error: "invalid_min_protein" }, 400);
-    where.push("EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id AND m.review_status='approved' AND m.nutrition_source IS NOT NULL
+    where.push(`EXISTS (SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=r.id AND m.review_status='approved' AND m.nutrition_source IS NOT NULL
       AND EXISTS(SELECT 1 FROM recipe_evidence ev WHERE ev.recipe_id=m.recipe_id
         AND length(trim(COALESCE(ev.nutrition_evidence_url,'')))>0)
-      AND m.protein_g >= ?)");
+      AND m.protein_g >= ?)`);
     params.push(minProtein);
   }
   if (query) {
