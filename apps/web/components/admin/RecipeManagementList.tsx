@@ -8,6 +8,8 @@ import { useAdminSecret } from "@/components/admin/AdminSecretContext";
 import {
   deleteAdminRecipe,
   fetchAdminRecipes,
+  queueAdminRecipe,
+  cancelQueuedRecipe,
   type AdminRecipeListRow,
   type AdminRecipeStatus,
 } from "@/lib/adminRecipeFetch";
@@ -18,6 +20,7 @@ export function RecipeManagementList() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [queueBusyId, setQueueBusyId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<AdminRecipeListRow | null>(null);
   const [status, setStatus] = useState<AdminRecipeStatus>("all");
   const [page, setPage] = useState(1);
@@ -57,6 +60,31 @@ export function RecipeManagementList() {
     return () => { ++requestId.current; };
   }, [adminSecret, load]);
 
+  async function toggleQueue(row: AdminRecipeListRow) {
+    if (!adminSecret.trim()) return;
+    const currentlyQueued = row.queue_status === "queued";
+    if (!window.confirm(currentlyQueued
+      ? "Энэ жорыг өдөр тутмын нийтлэлийн дарааллаас хасах уу?"
+      : "Энэ баталгаажсан жорыг өдөр тутам нэгээр нь нийтлэх дараалалд оруулах уу?")) return;
+    setQueueBusyId(row.id);
+    setErr(null);
+    try {
+      const response = currentlyQueued
+        ? await cancelQueuedRecipe(adminSecret,row.id)
+        : await queueAdminRecipe(adminSecret,row.id);
+      if (!response.ok) {
+        const result = await response.json().catch(() => null) as {error?:string}|null;
+        throw new Error(result?.error ?? "queue_failed");
+      }
+      setRows(prev => (prev ?? []).map(x =>
+        x.id === row.id ? {...x,queue_status:currentlyQueued ? null : "queued"} : x));
+    } catch {
+      setErr("Нийтлэлийн дараалал өөрчилж чадсангүй. Жорын эрх, хугацаа, орц, алхам болон review-ийг шалгаарай.");
+    } finally {
+      setQueueBusyId(null);
+    }
+  }
+
   async function confirmDelete() {
     const row = pendingDelete;
     if (!row || !adminSecret.trim()) return;
@@ -82,7 +110,7 @@ export function RecipeManagementList() {
           <div>
             <h1 className="text-xl font-semibold text-zinc-900">Жорын удирдлага</h1>
             <p className="mt-1 text-sm text-zinc-600">
-              Жорыг засах, үзэх, устгах. Нийтлэсэн жор вэб дээр харагдана.
+              Жорыг шалгах, засах, нийтлэхээр товлох. Зөвхөн баталгаажсан, ашиглах эрх нь хянагдсан жор өдөр тутмын дараалалд орно.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -136,6 +164,8 @@ export function RecipeManagementList() {
                 r={r}
                 deletingId={deletingId}
                 onDeleteClick={() => setPendingDelete(r)}
+                onQueueClick={() => void toggleQueue(r)}
+                queueBusy={queueBusyId === r.id}
               />
             ))}
           </ul>
