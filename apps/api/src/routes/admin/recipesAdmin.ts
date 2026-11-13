@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { bearerPayload } from "../../lib/authBearer";
-import { READY_TO_PUBLISH_SQL } from "../../lib/dailyApprovedPublish";
+import { READY_TO_PUBLISH_SQL, REVIEWABLE_RECIPE_SQL } from "../../lib/dailyApprovedPublish";
 import type { Env } from "../../bindings";
 import { insertRecipe, applyRecipePatch } from "../../lib/applyRecipePatch";
 import { metadataFromRow } from "../../lib/recipeMetadata";
@@ -68,6 +68,56 @@ recipesAdmin.delete("/recipes/:id/queue", async (c) => {
   return c.json({ok:true});
 });
 
+/** Human attestation must be a separate, deliberate action after saving. */
+recipesAdmin.post("/recipes/:id/approve", async (c) => {
+  const recipeId = c.req.param("id");
+  const eligible = await c.env.DB.prepare(`SELECT r.id FROM recipes r
+    JOIN recipe_metadata m ON m.recipe_id=r.id
+    WHERE r.id=? AND ${REVIEWABLE_RECIPE_SQL}`).bind(recipeId).first();
+  if (!eligible) return c.json({ error: "recipe_not_reviewable" }, 409);
+  const actor = (await bearerPayload(c))?.sub ?? "admin-secret";
+  const id = crypto.randomUUID();
+  await c.env.DB.batch([
+    c.env.DB.prepare(`UPDATE recipe_metadata SET review_status='approved',
+      reviewed_at=datetime('now'),updated_at=datetime('now') WHERE recipe_id=?
+      AND EXISTS (SELECT 1 FROM recipes r WHERE r.id=? AND ${REVIEWABLE_RECIPE_SQL})`)
+      .bind(recipeId,recipeId),
+    c.env.DB.prepare(`INSERT INTO recipe_review_events(id,recipe_id,actor_id,action)
+      SELECT ?,?,?,'approved' WHERE EXISTS (
+        SELECT 1 FROM recipe_metadata m WHERE m.recipe_id=? AND m.review_status='approved'
+      )`).bind(id,recipeId,actor,recipeId),
+  ]);
+  const result = await c.env.DB.prepare(
+    "SELECT review_status FROM recipe_metadata WHERE recipe_id=?"
+  ).bind(recipeId).first<{review_status:string}>();
+  return result?.review_status === "approved" ? c.json({ok:true}) :
+    c.json({error:"review_changed_during_approval"},409);
+});
+
+/** Immediately release an already approved draft, without bypassing editorial checks. */
+recipesAdmin.post("/recipes/:id/publish", async (c) => {
+  const recipeId = c.req.param("id");
+  const actor = (await bearerPayload(c))?.sub ?? "admin-secret";
+  const eventId = crypto.randomUUID();
+  await c.env.DB.batch([
+    c.env.DB.prepare(`UPDATE recipes SET is_published=1 WHERE id=?
+      AND EXISTS (SELECT 1 FROM recipes r JOIN recipe_metadata m ON m.recipe_id=r.id
+        WHERE r.id=? AND ${READY_TO_PUBLISH_SQL})`).bind(recipeId,recipeId),
+    c.env.DB.prepare(`INSERT OR REPLACE INTO recipe_publication_dates(recipe_id,published_at)
+      SELECT id,datetime('now') FROM recipes WHERE id=? AND is_published=1`)
+      .bind(recipeId),
+    c.env.DB.prepare(`INSERT INTO recipe_review_events(id,recipe_id,actor_id,action)
+      SELECT ?,?,?,'published' FROM recipes WHERE id=? AND is_published=1`)
+      .bind(eventId,recipeId,actor,recipeId),
+    c.env.DB.prepare(`DELETE FROM recipe_publication_queue WHERE recipe_id=? AND status='queued'`)
+      .bind(recipeId),
+  ]);
+  const row = await c.env.DB.prepare("SELECT is_published FROM recipes WHERE id=?")
+    .bind(recipeId).first<{is_published:number}>();
+  return row?.is_published === 1 ? c.json({ok:true}) :
+    c.json({error:"editorial_approval_required"},409);
+});
+
 recipesAdmin.get("/recipes/:id", async (c) => {
   const id = c.req.param("id");
   const recipe = await c.env.DB.prepare("SELECT * FROM recipes WHERE id = ?")
@@ -100,21 +150,35 @@ recipesAdmin.get("/recipes/:id", async (c) => {
 });
 
 recipesAdmin.post("/recipes", async (c) => {
-  const patch = await c.req.json().catch(() => null) as RecipePatchPayload | null;
+  const incoming = await c.req.json().catch(() => null) as RecipePatchPayload | null;
+  const patch = incoming?.recipe ? {
+    ...incoming,
+    recipe: { ...incoming.recipe, is_published: false },
+    metadata: incoming.metadata ? {
+      ...incoming.metadata, review_status: "pending" as const, allergen_status: "unknown" as const,
+    } : undefined,
+  } : null;
   const errors = validateRecipePatch(patch);
   if (!patch || errors.length) return c.json({ error: "invalid_recipe", details: errors }, 400);
   const id = crypto.randomUUID();
   await insertRecipe(c.env.DB, id, patch);
-  return c.json({ id });
+  return c.json({ id, status: "draft" });
 });
 
 recipesAdmin.patch("/recipes/:id", async (c) => {
   const id = c.req.param("id");
-  const patch = await c.req.json().catch(() => null) as RecipePatchPayload | null;
+  const incoming = await c.req.json().catch(() => null) as RecipePatchPayload | null;
+  const patch = incoming?.recipe ? {
+    ...incoming,
+    recipe: { ...incoming.recipe, is_published: false },
+    metadata: incoming.metadata ? {
+      ...incoming.metadata, review_status: "pending" as const, allergen_status: "unknown" as const,
+    } : undefined,
+  } : null;
   const errors = validateRecipePatch(patch);
   if (!patch || errors.length) return c.json({ error: "invalid_recipe", details: errors }, 400);
   await applyRecipePatch(c.env.DB, id, patch);
-  return c.json({ ok: true });
+  return c.json({ ok: true, status: "needs_review" });
 });
 
 recipesAdmin.delete("/recipes/:id", async (c) => {
