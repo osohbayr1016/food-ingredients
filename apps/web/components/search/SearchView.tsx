@@ -58,9 +58,6 @@ export function SearchView({ initialQ }: { initialQ: string }) {
         if (query.trim()) qs.set("q", query.trim());
         if (time) qs.set("max_cook_time", time);
         if (easy) qs.set("difficulty", "1");
-      if (allergens) qs.set("exclude_allergens",allergens);
-      if (maxCalories) qs.set("max_calories",maxCalories);
-      if (minProtein) qs.set("min_protein",minProtein);
         if (allergens) qs.set("exclude_allergens",allergens);
         if (maxCalories) qs.set("max_calories",maxCalories);
         if (minProtein) qs.set("min_protein",minProtein);
@@ -104,6 +101,9 @@ export function SearchView({ initialQ }: { initialQ: string }) {
       if (query.trim()) qs.set("q", query.trim());
       if (time) qs.set("max_cook_time", time);
       if (easy) qs.set("difficulty", "1");
+      if (allergens) qs.set("exclude_allergens",allergens);
+      if (maxCalories) qs.set("max_calories",maxCalories);
+      if (minProtein) qs.set("min_protein",minProtein);
       const response = await clientFetch(`/recipes?${qs.toString()}`);
       if (!response.ok) throw new Error("pagination_failed");
       const data = await response.json() as RecipePage;
