@@ -9,6 +9,22 @@ import { validateRecipePatch } from "../../lib/recipeValidation";
 
 export const recipesAdmin = new Hono<{ Bindings: Env }>();
 
+/** Make disabled schedulers visible; queueing alone never promises publication. */
+recipesAdmin.get("/automation/status", async (c) => {
+  const queue = await c.env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM recipe_publication_queue WHERE status='queued'"
+  ).first<{n:number}>();
+  const last = await c.env.DB.prepare(
+    "SELECT MAX(published_at) AS last_at FROM recipe_publication_days"
+  ).first<{last_at:string|null}>();
+  return c.json({
+    import_enabled: c.env.AUTO_IMPORT_ENABLED === "true",
+    publish_enabled: c.env.AUTO_DAILY_PUBLISH === "true",
+    queued_count: queue?.n ?? 0,
+    last_published_at: last?.last_at ?? null,
+  });
+});
+
 recipesAdmin.get("/recipes", async (c) => {
   const page = Number(c.req.query("page") || 1);
   const pageSize = Number(c.req.query("page_size") || 30);
