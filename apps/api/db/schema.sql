@@ -164,3 +164,14 @@ CREATE INDEX IF NOT EXISTS ix_auth_rate_limits_expiry ON auth_rate_limits(window
 CREATE INDEX IF NOT EXISTS ix_recipes_pub_created ON recipes(is_published, created_at DESC, id ASC);
 CREATE INDEX IF NOT EXISTS ix_ingredients_canonical_recipe ON ingredients(ingredient_canonical_id, recipe_id);
 CREATE INDEX IF NOT EXISTS ix_ingredients_lower_name ON ingredients(lower(name));
+
+-- Approved daily recipe publication queue.
+CREATE TABLE IF NOT EXISTS recipe_publication_queue (
+  recipe_id TEXT PRIMARY KEY REFERENCES recipes(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','published')),
+  queued_by TEXT NOT NULL,
+  queued_at TEXT NOT NULL DEFAULT (datetime('now')),
+  published_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_publication_queue_status_time
+  ON recipe_publication_queue(status,queued_at);
