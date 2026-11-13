@@ -1,4 +1,5 @@
 import type { RecipePatchPayload } from "./recipePayload";
+import { validateRecipeMetadata } from "./recipeMetadata";
 
 /** Fail closed on invalid publication metadata; drafts may be incomplete. */
 export function validateRecipePatch(value: unknown): string[] {
@@ -6,7 +7,7 @@ export function validateRecipePatch(value: unknown): string[] {
   const p = value as Partial<RecipePatchPayload>;
   if (!p.recipe || typeof p.recipe !== "object" || !Array.isArray(p.ingredients) || !Array.isArray(p.steps)) return ["invalid_payload"];
   const r = p.recipe;
-  const errors: string[] = [];
+  const errors: string[] = [...validateRecipeMetadata(p.metadata)];
   const str = (v: unknown) => typeof v === "string" ? v.trim() : "";
   const int = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
   if (str(r.title).length < 3 || str(r.title).length > 160) errors.push("invalid_title");
@@ -34,6 +35,7 @@ export function validateRecipePatch(value: unknown): string[] {
     }
   }
   if (r.is_published === true || r.is_published === 1) {
+    if (p.metadata?.review_status !== "approved") errors.push("publish_requires_editorial_approval");
     if (p.ingredients.length < 2) errors.push("publish_requires_ingredients");
     if (p.steps.length < 2) errors.push("publish_requires_steps");
     if (!Number.isFinite(r.prep_time + r.cook_time) || r.prep_time + r.cook_time <= 0) errors.push("publish_requires_known_time");
