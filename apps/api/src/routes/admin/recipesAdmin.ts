@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { bearerPayload } from "../../lib/authBearer";
 import type { Env } from "../../bindings";
 import { insertRecipe, applyRecipePatch } from "../../lib/applyRecipePatch";
 import { metadataFromRow } from "../../lib/recipeMetadata";
@@ -28,8 +29,9 @@ recipesAdmin.get("/recipes", async (c) => {
     where.push("r.is_published=0 AND m.review_status='approved' AND COALESCE(m.license_name,'') <> ''");
   }
   const { results } = await c.env.DB.prepare(`SELECT r.id,r.title,r.cuisine,
-      r.is_published,r.created_at,m.review_status,m.license_name
+      r.is_published,r.created_at,m.review_status,m.license_name,q.status AS queue_status
     FROM recipes r LEFT JOIN recipe_metadata m ON m.recipe_id=r.id
+    LEFT JOIN recipe_publication_queue q ON q.recipe_id=r.id
     ${where.length ? "WHERE " + where.join(" AND ") : ""}
     ORDER BY datetime(r.created_at) DESC,r.id ASC LIMIT ? OFFSET ?`)
     .bind(pageSize + 1, (page - 1) * pageSize).all();
@@ -38,6 +40,36 @@ recipesAdmin.get("/recipes", async (c) => {
     recipes: rows.slice(0,pageSize),
     pagination: {page,page_size:pageSize,has_more:rows.length > pageSize},
   });
+});
+
+/** Explicit editorial scheduling. Importing a draft never queues publication. */
+recipesAdmin.post("/recipes/:id/queue", async (c) => {
+  const recipeId = c.req.param("id");
+  const eligible = await c.env.DB.prepare(`SELECT r.id FROM recipes r
+    JOIN recipe_metadata m ON m.recipe_id=r.id
+    WHERE r.id=? AND r.is_published=0 AND m.review_status='approved'
+      AND trim(COALESCE(m.license_name,'')) <> ''
+      AND (r.prep_time + r.cook_time) > 0
+      AND length(trim(r.description)) >= 15
+      AND (SELECT COUNT(*) FROM ingredients i WHERE i.recipe_id=r.id) >= 2
+      AND (SELECT COUNT(*) FROM steps s WHERE s.recipe_id=r.id) >= 2`)
+    .bind(recipeId).first();
+  if (!eligible) return c.json({error:"editorial_approval_required"},409);
+  const jwt = await bearerPayload(c);
+  await c.env.DB.prepare(`INSERT OR IGNORE INTO recipe_publication_queue
+    (recipe_id, queued_by) VALUES (?,?)`).bind(recipeId,jwt?.sub ?? "admin_secret").run();
+  const result = await c.env.DB.prepare(
+    "SELECT status, queued_at FROM recipe_publication_queue WHERE recipe_id=?"
+  ).bind(recipeId).first<{status:string;queued_at:string}>();
+  return c.json({ok:true,queue:result});
+});
+
+recipesAdmin.delete("/recipes/:id/queue", async (c) => {
+  const recipeId = c.req.param("id");
+  await c.env.DB.prepare(
+    "DELETE FROM recipe_publication_queue WHERE recipe_id=? AND status='queued'"
+  ).bind(recipeId).run();
+  return c.json({ok:true});
 });
 
 recipesAdmin.get("/recipes/:id", async (c) => {
