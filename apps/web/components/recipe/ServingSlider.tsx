@@ -10,8 +10,8 @@ export function ServingSlider({
   return (
     <label className="block space-y-2 text-xs text-zinc-500">
       <div className="flex justify-between text-sm text-zinc-900">
-        <span>Servings</span>
-        <span className="font-semibold text-(--figma-primary)">{value} servings</span>
+        <span>Порц</span>
+        <span className="font-semibold text-(--figma-primary)">{value} порц</span>
       </div>
       <input
         type="range"
