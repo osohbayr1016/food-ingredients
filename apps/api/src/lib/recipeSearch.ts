@@ -39,7 +39,7 @@ export function likePattern(term: string): string {
 /** FTS5-safe tokenized prefix query; never pass user input as FTS syntax. */
 export function recipeFtsMatch(input: string): string {
   const phrases = expandRecipeSearch(input).map(term => {
-    const tokens = term.normalize("NFKC").match(/[\\p{L}\\p{N}]+/gu) ?? [];
+    const tokens = term.normalize("NFKC").match(/[\p{L}\p{N}]+/gu) ?? [];
     return tokens.slice(0,8).map(token => `"${token}"*`).join(" AND ");
   }).filter(Boolean);
   return phrases.map(x => `(${x})`).join(" OR ");
