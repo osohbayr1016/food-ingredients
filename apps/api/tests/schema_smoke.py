@@ -32,4 +32,13 @@ db.execute("INSERT OR IGNORE INTO recipe_publication_days(day_utc,recipe_id) VAL
 assert db.execute("SELECT recipe_id FROM recipe_publication_days WHERE day_utc='2026-11-13'").fetchone()[0] == 't'
 assert db.execute("SELECT name FROM sqlite_master WHERE name='recipe_review_events'").fetchone()
 assert db.execute("SELECT name FROM sqlite_master WHERE name='recipe_publication_dates'").fetchone()
+db.execute("INSERT INTO ingredient_categories(id,name) VALUES ('v','Vegetables')")
+db.execute("INSERT INTO ingredient_canonicals(id,name) VALUES ('pot','Төмс')")
+db.execute("INSERT INTO ingredient_aliases(id,canonical_id,alias,normalized) VALUES ('al-pot','pot','Potato','potato')")
+db.execute("INSERT INTO ingredients(id,recipe_id,ingredient_canonical_id,name,quantity,unit,category_id) VALUES ('ing-pot','t','pot','Төмс',1,'ш','v')")
+assert db.execute("SELECT recipe_id FROM recipe_search_fts WHERE recipe_search_fts MATCH ?", ('"potato"*',)).fetchone()[0] == 't'
+db.execute("UPDATE ingredient_aliases SET alias='Spud', normalized='spud' WHERE id='al-pot'")
+assert db.execute("SELECT recipe_id FROM recipe_search_fts WHERE recipe_search_fts MATCH ?", ('"spud"*',)).fetchone()[0] == 't'
+db.execute("DELETE FROM ingredients WHERE id='ing-pot'")
+assert not db.execute("SELECT recipe_id FROM recipe_search_fts WHERE recipe_search_fts MATCH ?", ('"spud"*',)).fetchall()
 print("D1-compatible schema & migrations: smoke test passed")
