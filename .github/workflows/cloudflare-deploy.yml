@@ -153,6 +153,9 @@ jobs:
           packageManager: pnpm
           command: deploy
 
+      - name: Verify freshly deployed API before frontend deploy
+        run: node scripts/smoke-production.mjs api
+
       - name: Build frontend (next-on-pages)
         run: pnpm --filter web run pages:build
 
@@ -165,11 +168,5 @@ jobs:
           packageManager: pnpm
           command: deploy
 
-      - name: Smoke test production API
-        run: |
-          curl --fail --silent --show-error --retry 6 --retry-delay 5 --retry-all-errors \
-            https://food-ingredients-api.osohoo691016.workers.dev/health/ready
-      - name: Smoke test production homepage
-        run: |
-          curl --fail --silent --show-error --location --retry 6 --retry-delay 5 --retry-all-errors \
-            --output /dev/null https://food-ingredients-web.osohoo691016.workers.dev/
+      - name: Verify deployed frontend routes
+        run: node scripts/smoke-production.mjs web

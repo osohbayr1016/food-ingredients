@@ -57,6 +57,8 @@ jobs:
         run: node --experimental-strip-types --test apps/web/tests/meal-shopping.test.mjs
       - name: Recipe recommendation sorting tests
         run: node --experimental-strip-types --test apps/web/tests/suggest-sort.test.mjs
+      - name: Production smoke runner syntax
+        run: node --check scripts/smoke-production.mjs
       - name: API typecheck
         run: pnpm --filter api exec tsc --noEmit
       - name: API Wrangler dry-run bundle
