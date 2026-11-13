@@ -13,6 +13,8 @@ export function ProfileLibrarySection({
   tab,
   setTab,
   loading,
+  error,
+  onRetry,
   saved,
   liked,
   onSignOut,
@@ -21,6 +23,8 @@ export function ProfileLibrarySection({
   tab: Tab;
   setTab: (t: Tab) => void;
   loading: boolean;
+  error: boolean;
+  onRetry: () => void;
   saved: RecipeListItem[];
   liked: RecipeListItem[];
   onSignOut: () => void;
@@ -81,9 +85,13 @@ export function ProfileLibrarySection({
         ))}
       </div>
 
+      {error && <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        Хадгалсан болон дуртай жоруудыг ачаалж чадсангүй.
+        <button type="button" onClick={onRetry} className="ml-3 font-semibold underline">Дахин оролдох</button>
+      </div>}
       {tab === "nutrition" ? (
         <ProfileNutritionAccount />
-      ) : loading ? (
+      ) : error ? null : loading ? (
         <p className="py-8 text-center text-sm text-zinc-500">Ачааллаж байна…</p>
       ) : tab === "saved" ? (
         saved.length ? (
@@ -100,6 +108,9 @@ export function ProfileLibrarySection({
           Дуртай жор байхгүй.
         </p>
       )}
+      <Link href="/saved" className="block rounded-2xl border border-[#dfe9da] bg-[#f8fbf6] px-4 py-3 text-center text-sm font-semibold text-[#276440]">
+        Хоол хийсэн түүхээ үзэх
+      </Link>
       {user.role === "admin" ? (
         <Link
           href="/admin"

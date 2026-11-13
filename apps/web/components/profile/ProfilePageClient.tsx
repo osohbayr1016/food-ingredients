@@ -13,6 +13,8 @@ export default function ProfilePageClient() {
   const [saved, setSaved] = useState<RecipeListItem[]>([]);
   const [liked, setLiked] = useState<RecipeListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   const reloadRecipes = useCallback(async () => {
     if (!user) {
@@ -22,19 +24,24 @@ export default function ProfilePageClient() {
       return;
     }
     setLoading(true);
+    setError(false);
     try {
       const [sa, li] = await Promise.all([
         clientFetch("/saved"),
         clientFetch("/likes"),
       ]);
-      const sj = (await sa.json()) as { saved: RecipeListItem[] };
-      const lj = (await li.json()) as { liked: RecipeListItem[] };
-      setSaved(Array.isArray(sj.saved) ? sj.saved : []);
-      setLiked(Array.isArray(lj.liked) ? lj.liked : []);
+      if (!sa.ok || !li.ok) throw new Error("library_fetch_failed");
+      const sj = await sa.json() as { saved?: RecipeListItem[] };
+      const lj = await li.json() as { liked?: RecipeListItem[] };
+      if (!Array.isArray(sj.saved) || !Array.isArray(lj.liked)) throw new Error("library_invalid_response");
+      setSaved(sj.saved);
+      setLiked(lj.liked);
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id, retry]);
 
   useEffect(() => {
     reloadRecipes();
@@ -62,6 +69,8 @@ export default function ProfilePageClient() {
       tab={tab}
       setTab={setTab}
       loading={loading}
+      error={error}
+      onRetry={() => setRetry(value => value+1)}
       saved={saved}
       liked={liked}
       onSignOut={logout}
