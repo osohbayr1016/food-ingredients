@@ -3,6 +3,28 @@ import type { Env } from "../bindings";
 
 export const recipes = new Hono<{ Bindings: Env }>();
 
+// Deterministic bilingual keywords for existing English-language recipe imports.
+// This is search assistance, not a guarantee of translation or allergy safety.
+const ingredientSearchAliases: Record<string, string[]> = {
+  "тахиа": ["chicken"],
+  "өндөг": ["egg"],
+  "төмс": ["potato"],
+  "лууван": ["carrot"],
+  "сонгино": ["onion"],
+  "будаа": ["rice"],
+  "гоймон": ["noodle", "pasta"],
+  "загас": ["fish"],
+  "үхрийн мах": ["beef"],
+  "шөл": ["soup"],
+  "салат": ["salad"],
+  "мөөг": ["mushroom"],
+  "сүү": ["milk"],
+  "бяслаг": ["cheese"],
+  "гурил": ["flour"],
+  "гахай": ["pork"],
+  "байцаа": ["cabbage"],
+};
+
 recipes.get("/recipes", async (c) => {
   const cuisine = c.req.query("cuisine");
   const difficulty = c.req.query("difficulty");
@@ -29,10 +51,11 @@ recipes.get("/recipes", async (c) => {
     }
   }
   if (query) {
-    where.push(
-      `(lower(r.title) LIKE ? OR r.id IN (SELECT recipe_id FROM ingredients WHERE lower(name) LIKE ?))`,
-    );
-    params.push(`%${query}%`, `%${query}%`);
+    const terms = [query, ...(ingredientSearchAliases[query] ?? [])];
+    where.push(`(${terms.map(() => "(lower(r.title) LIKE ? OR r.id IN (SELECT recipe_id FROM ingredients WHERE lower(name) LIKE ?))").join(" OR ")})`);
+    for (const term of terms) {
+      params.push(`%${term}%`, `%${term}%`);
+    }
   }
 
   let sql = "SELECT DISTINCT r.* FROM recipes r";
