@@ -1,6 +1,7 @@
 "use client";
 
 import { clientFetch } from "@/lib/clientApi";
+import { getRecipeLibraryIds, updateRecipeLibraryId } from "@/lib/recipeLibraryCache";
 import {
   dispatchLibrary,
   isLikedId,
@@ -33,38 +34,30 @@ export function RecipeLikeButton({
   const { user, ready } = useAuth();
   const [on, setOn] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      if (!user) {
-        if (!cancelled) setOn(isLikedId(recipeId));
-        return;
-      }
-      const res = await clientFetch(`/likes/${recipeId}`);
-      const j = (await res.json()) as { liked?: boolean };
-      if (!cancelled) setOn(!!j.liked);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [recipeId, user]);
-
-  useEffect(() => {
-    function refresh() {
+    const refresh = () => {
       if (!user) {
         setOn(isLikedId(recipeId));
+        setLoading(false);
         return;
       }
-      void (async () => {
-        const res = await clientFetch(`/likes/${recipeId}`);
-        const j = (await res.json()) as { liked?: boolean };
-        setOn(!!j.liked);
-      })();
-    }
+      void getRecipeLibraryIds(user.id, "likes")
+        .then(ids => { if (!cancelled) { setOn(ids.has(recipeId)); setFailed(false); } })
+        .catch(() => { if (!cancelled) setFailed(true); })
+        .finally(() => { if (!cancelled) setLoading(false); });
+    };
+    setLoading(true);
+    refresh();
     window.addEventListener("food-library-changed", refresh);
-    return () => window.removeEventListener("food-library-changed", refresh);
-  }, [recipeId, user]);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("food-library-changed", refresh);
+    };
+  }, [recipeId, user?.id]);
 
   async function click(e?: React.MouseEvent) {
     e?.stopPropagation();
@@ -83,18 +76,21 @@ export function RecipeLikeButton({
     }
     setBusy(true);
     try {
-      if (on) {
-        await clientFetch(`/likes/${recipeId}`, { method: "DELETE" });
-        setOn(false);
-      } else {
-        await clientFetch("/likes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ recipe_id: recipeId }),
-        });
-        setOn(true);
-      }
+      const next = !on;
+      const res = on
+        ? await clientFetch(`/likes/${recipeId}`, { method: "DELETE" })
+        : await clientFetch("/likes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recipe_id: recipeId }),
+          });
+      if (!res.ok) throw new Error("like_failed");
+      updateRecipeLibraryId(user.id, "likes", recipeId, next);
+      setOn(next);
+      setFailed(false);
       dispatchLibrary();
+    } catch {
+      setFailed(true);
     } finally {
       setBusy(false);
     }
@@ -107,16 +103,16 @@ export function RecipeLikeButton({
       ? "h-10 w-10 border border-white/30 bg-white/25 text-white backdrop-blur-md"
       : "h-9 w-9 text-white shadow-md";
   const tint =
-    variant === "card" ? { backgroundColor: "rgba(226,62,62,0.92)" } : undefined;
+    variant === "card" ? { backgroundColor: "#276440" } : undefined;
 
   return (
     <button
       type="button"
-      disabled={busy}
+      disabled={busy || loading}
       onClick={click}
       className={`${base} ${ring}`}
       style={tint}
-      aria-label={on ? "Unlike recipe" : "Like recipe"}
+      aria-label={failed ? "Дуртайд нэмэхэд алдаа гарсан. Дахин оролдох" : on ? "Дуртайгаас хасах" : "Дуртайд нэмэх"}
     >
       <HeartIcon filled={on} />
     </button>
