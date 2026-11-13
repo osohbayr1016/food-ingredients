@@ -39,6 +39,8 @@ jobs:
         run: node --experimental-strip-types --test apps/api/tests/pantry-sync.test.mjs
       - name: Pantry inventory unit tests
         run: node --experimental-strip-types --test apps/web/tests/pantry-inventory.test.mjs
+      - name: Account-deletion rate limit policy tests
+        run: node --experimental-strip-types --test apps/api/tests/auth-limits.test.mjs
       - name: Cross-origin allowlist validation tests
         run: node --experimental-strip-types --test apps/api/tests/cors-policy.test.mjs
       - name: Safe auth inputs and login redirects

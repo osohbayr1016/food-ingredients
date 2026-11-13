@@ -1,4 +1,9 @@
-type Action = "register" | "login";
+export type Action = "register" | "login" | "delete_account";
+export function authLimitPolicy(action:Action){
+  if(action==="register")return {seconds:3600,maxAttempts:8};
+  if(action==="delete_account")return {seconds:3600,maxAttempts:6};
+  return {seconds:900,maxAttempts:25};
+}
 
 function toHex(a: ArrayBuffer) {
   return Array.from(new Uint8Array(a)).map(b => b.toString(16).padStart(2, "0")).join("");
@@ -8,8 +13,7 @@ function toHex(a: ArrayBuffer) {
 export async function checkAuthRateLimit(
   db: D1Database, ip: string, action: Action, secret: string,
 ): Promise<{ allowed: boolean; retryAfter: number }> {
-  const seconds = action === "register" ? 3600 : 900;
-  const maxAttempts = action === "register" ? 8 : 25;
+  const {seconds,maxAttempts}=authLimitPolicy(action);
   const now = Math.floor(Date.now() / 1000);
   const windowStart = Math.floor(now / seconds) * seconds;
   const identity = toHex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${secret}:auth:${ip}`)));
