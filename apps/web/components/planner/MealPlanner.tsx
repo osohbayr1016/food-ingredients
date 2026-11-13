@@ -86,8 +86,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
   const [searchNextPage, setSearchNextPage] = useState(2);
   const [searchLoadingMore, setSearchLoadingMore] = useState(false);
   const [searchMoreError, setSearchMoreError] = useState(false);
-  const currentSearch = useRef("");
-  currentSearch.current = query.trim().toLowerCase();
+  const currentSearch = useRef(query.trim().toLowerCase());
   const [selectedMeta, setSelectedMeta] = useState<Record<string, { title: string; serves: number }>>({});
   const [searchError, setSearchError] = useState(false);
   const [searchBusy, setSearchBusy] = useState(false);
@@ -292,7 +291,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
           ))}
         </div>
         <label className="block text-sm font-medium text-zinc-700">Хоолны нэрээр шүүх
-          <input value={query} onChange={e=>setQuery(e.target.value)} type="search"
+          <input value={query} onChange={e=>{currentSearch.current=e.target.value.trim().toLowerCase();setQuery(e.target.value);}} type="search"
             placeholder="Жишээ: тахиа, шөл..."
             className="mt-2 w-full rounded-xl border border-[#d8e6d5] px-4 py-3 text-sm outline-none focus:border-[#2e7449]" />
         </label>
