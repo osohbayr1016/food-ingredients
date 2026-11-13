@@ -1,30 +1,9 @@
 import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { ALLERGEN_CODES, metadataFromRow } from "../lib/recipeMetadata";
+import { expandRecipeSearch } from "../lib/recipeSearch";
 
 export const recipes = new Hono<{ Bindings: Env }>();
-
-// Deterministic bilingual keywords for existing English-language recipe imports.
-// This is search assistance, not a guarantee of translation or allergy safety.
-const ingredientSearchAliases: Record<string, string[]> = {
-  "тахиа": ["chicken"],
-  "өндөг": ["egg"],
-  "төмс": ["potato"],
-  "лууван": ["carrot"],
-  "сонгино": ["onion"],
-  "будаа": ["rice"],
-  "гоймон": ["noodle", "pasta"],
-  "загас": ["fish"],
-  "үхрийн мах": ["beef"],
-  "шөл": ["soup"],
-  "салат": ["salad"],
-  "мөөг": ["mushroom"],
-  "сүү": ["milk"],
-  "бяслаг": ["cheese"],
-  "гурил": ["flour"],
-  "гахай": ["pork"],
-  "байцаа": ["cabbage"],
-};
 
 recipes.get("/recipes", async (c) => {
   const cuisine = c.req.query("cuisine");
@@ -83,11 +62,18 @@ recipes.get("/recipes", async (c) => {
     params.push(minProtein);
   }
   if (query) {
-    const terms = [query, ...(ingredientSearchAliases[query] ?? [])];
-    where.push(`(${terms.map(() => "(lower(r.title) LIKE ? OR r.id IN (SELECT recipe_id FROM ingredients WHERE lower(name) LIKE ?))").join(" OR ")})`);
-    for (const term of terms) {
-      params.push(`%${term}%`, `%${term}%`);
-    }
+    const terms = expandRecipeSearch(query);
+    const matches = `(instr(lower(r.title), ?) > 0 OR EXISTS (
+      SELECT 1 FROM ingredients ing
+      LEFT JOIN ingredient_canonicals canon ON canon.id=ing.ingredient_canonical_id
+      LEFT JOIN ingredient_aliases alias ON alias.canonical_id=ing.ingredient_canonical_id
+      WHERE ing.recipe_id=r.id AND (
+        instr(lower(ing.name), ?) > 0 OR instr(lower(canon.name), ?) > 0
+        OR instr(alias.normalized, ?) > 0
+      )
+    ))`;
+    where.push(`(${terms.map(() => matches).join(" OR ")})`);
+    for (const term of terms) params.push(term, term, term, term);
   }
 
   let sql = "SELECT DISTINCT r.* FROM recipes r";
