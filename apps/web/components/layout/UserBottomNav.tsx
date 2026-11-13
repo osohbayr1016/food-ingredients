@@ -91,7 +91,7 @@ export function UserBottomNav() {
           >
             <IconDiscover active={here("/discover")} />
             <span style={{ color: here("/discover") ? primary : undefined }}>
-              Discover
+              Жорууд
             </span>
           </Link>
           <div className="relative flex w-16 shrink-0 flex-col items-center justify-end -mt-7">
@@ -100,7 +100,7 @@ export function UserBottomNav() {
               className="mt-1 max-w-20 truncate text-center text-[11px] font-medium text-zinc-500"
               style={{ color: here("/pantry") ? primary : undefined }}
             >
-              Pantry
+              Орц
             </span>
           </div>
           <Link
@@ -118,7 +118,7 @@ export function UserBottomNav() {
           >
             <IconUser active={here("/profile") || here("/login")} />
             <span style={{ color: here("/profile") || here("/login") ? primary : undefined }}>
-              Profile
+              Профайл
             </span>
           </Link>
         </div>
