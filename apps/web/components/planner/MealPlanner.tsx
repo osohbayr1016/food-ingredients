@@ -386,7 +386,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
           <div><h2 className="text-xl font-bold text-[#244834]">Худалдан авах жагсаалт</h2>
             {!!shopping.length && <p className="mt-1 text-xs font-semibold text-[#356a46]">
               {shopping.filter(line=>checked[line.key]).length}/{shopping.length} орц бэлдсэн
-            </p>
+            </p>}
             <p className="mt-1 text-xs text-zinc-600">Сонгосон порцоор тооцоолж, хөргөгчинд байгаа хэмжээг боломжтой нэгжээр нь хасна. Тодорхойгүй нэгжүүдийг гараар шалгаарай.</p>
           </div>
           {!!shopping.length && <button type="button" onClick={() => void copyShopping()}
