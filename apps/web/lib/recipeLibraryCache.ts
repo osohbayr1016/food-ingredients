@@ -33,7 +33,7 @@ export async function getRecipeLibraryIds(userId: string, kind: Kind): Promise<S
       throw err;
     });
   }
-  return entry.request;
+  return entry.request!;
 }
 
 export function updateRecipeLibraryId(userId: string, kind: Kind, recipeId: string, selected: boolean) {
