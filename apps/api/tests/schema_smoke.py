@@ -50,6 +50,10 @@ db.execute("DELETE FROM ingredient_aliases WHERE id='al-pot'")
 assert not db.execute("SELECT canonical_id FROM ingredient_search_fts WHERE ingredient_search_fts MATCH ?", ('"potato"*',)).fetchall()
 db.execute("INSERT INTO users(id,username,password_hash,role) VALUES('user-sync','sync_test','test','user')")
 db.execute("INSERT INTO user_pantry_snapshots(user_id,items_json) VALUES('user-sync','[]')")
+# New-user compare-and-swap does not create a snapshot from an old revision.
+bad=db.execute("INSERT OR IGNORE INTO user_pantry_snapshots(user_id,items_json,revision) SELECT 'missing-user','[]',1 WHERE 2=0")
+assert bad.rowcount==0
+
 result=db.execute("UPDATE user_pantry_snapshots SET items_json='[1]',revision=revision+1 WHERE user_id='user-sync' AND revision=1")
 assert result.rowcount == 1
 assert db.execute("UPDATE user_pantry_snapshots SET revision=revision+1 WHERE user_id='user-sync' AND revision=1").rowcount == 0
