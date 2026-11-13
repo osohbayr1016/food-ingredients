@@ -47,6 +47,13 @@ export async function publishOneApprovedRecipe(env: Env): Promise<string> {
         SELECT 1 FROM recipe_publication_queue WHERE recipe_id=? AND status='published'
       ) ON CONFLICT(recipe_id) DO UPDATE SET published_at=excluded.published_at`)
       .bind(candidate.id,candidate.id),
+    env.DB.prepare(`INSERT INTO recipe_review_events(id,recipe_id,actor_id,action)
+      SELECT ?,?,'daily-scheduler','published'
+      WHERE EXISTS (SELECT 1 FROM recipe_publication_queue
+        WHERE recipe_id=? AND status='published')
+      AND EXISTS (SELECT 1 FROM recipe_publication_days
+        WHERE day_utc=? AND recipe_id=?)`)
+      .bind(crypto.randomUUID(),candidate.id,candidate.id,dayUtc,candidate.id),
     env.DB.prepare(`UPDATE recipe_publication_days SET published_at=datetime('now')
       WHERE day_utc=? AND recipe_id=? AND published_at IS NULL
       AND EXISTS (SELECT 1 FROM recipe_publication_queue
