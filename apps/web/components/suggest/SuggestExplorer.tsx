@@ -38,17 +38,9 @@ export function SuggestExplorer() {
         </p>
         <h1 className="text-2xl font-bold text-zinc-900">Тохирох жор олох</h1>
         <p className="text-sm text-zinc-500">
-          Орцоо бичээд сонго, хэмжээгээ оруулаад шүүлтээ тохируулна. Жорыг бодит
-          орцоороор үнэлнэ.
+          Байгаа орцоо бичиж сонгоод “Жор санал болгох” дээр дараарай. Хэмжээ болон шүүлтүүрийг хүсвэл нэмж тохируулж болно.
         </p>
       </header>
-      <SuggestFeatureIntro />
-      <SuggestPantryScanPanel
-        onAddPicks={addMultiplePicks}
-        onAddPicksAndSuggest={addPicksAndSuggest}
-        suggestBusy={busy}
-        existingIds={existingIds}
-      />
       <SuggestPantryPicker onPick={addPick} existingIds={existingIds} />
       {pantry.length > 0 ? (
         <div className="space-y-2">
@@ -69,12 +61,6 @@ export function SuggestExplorer() {
           </ul>
         </div>
       ) : null}
-      <SuggestResultControls
-        filters={filters}
-        setFilterPatch={setFilterPatch}
-        sortKey={sortKey}
-        onSortKey={setSortKey}
-      />
       <button
         type="button"
         disabled={busy || !pantry.length}
@@ -84,6 +70,22 @@ export function SuggestExplorer() {
         {busy ? "Тооцоолж байна…" : "Жор санал болгох"}
       </button>
       <SuggestResults rows={rows} sortKey={sortKey} />
+      <details className="rounded-2xl border border-[#d9e6d7] bg-white p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-[#276440]">Нарийвчилсан шүүлтүүр</summary>
+        <div className="pt-3">
+          <SuggestResultControls filters={filters} setFilterPatch={setFilterPatch}
+            sortKey={sortKey} onSortKey={setSortKey} />
+        </div>
+      </details>
+      <details className="rounded-2xl border border-[#d9e6d7] bg-white p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-[#276440]">Зурагнаас орц таних (туршилтын)</summary>
+        <div className="pt-3">
+          <SuggestFeatureIntro />
+          <SuggestPantryScanPanel onAddPicks={addMultiplePicks}
+            onAddPicksAndSuggest={addPicksAndSuggest} suggestBusy={busy}
+            existingIds={existingIds} />
+        </div>
+      </details>
     </div>
   );
 }
