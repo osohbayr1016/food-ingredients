@@ -27,3 +27,5 @@ jobs:
         run: pnpm --filter web exec tsc --noEmit
       - name: Web lint
         run: pnpm --filter web lint
+      - name: Production frontend build
+        run: pnpm --filter web run pages:build
