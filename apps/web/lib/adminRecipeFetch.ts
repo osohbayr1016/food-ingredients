@@ -18,6 +18,7 @@ export type AdminRecipeListRow = {
   created_at: string;
   review_status?: "pending" | "approved" | null;
   license_name?: string | null;
+  queue_status?: "queued" | "published" | null;
 };
 
 export type AdminRecipeStatus = "all" | "draft" | "published" | "pending" | "ready";
@@ -34,6 +35,18 @@ export async function fetchAdminRecipes(token: string, page = 1, status: AdminRe
     recipes: Array.isArray(j.recipes) ? j.recipes : [],
     hasMore: j.pagination?.has_more === true,
   };
+}
+
+export async function queueAdminRecipe(token: string, recipeId: string) {
+  return fetch(`${apiBase()}/admin/recipes/${encodeURIComponent(recipeId)}/queue`, {
+    method: "POST", headers: adminHeaders(token),
+  });
+}
+
+export async function cancelQueuedRecipe(token: string, recipeId: string) {
+  return fetch(`${apiBase()}/admin/recipes/${encodeURIComponent(recipeId)}/queue`, {
+    method: "DELETE", headers: adminHeaders(token),
+  });
 }
 
 export type AdminRecipeDetail = {
