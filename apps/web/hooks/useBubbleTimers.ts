@@ -29,9 +29,10 @@ export function useBubbleTimers() {
   const [pulse, setPulse] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setPulse((n) => n + 1), 250);
+    if (!timers.length) return;
+    const id = setInterval(() => setPulse((n) => n + 1), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [timers.length]);
 
   const upsert = useCallback((opts: { id: string; label: string; seconds: number }) => {
     dispatch({ type: "upsert", ...opts });

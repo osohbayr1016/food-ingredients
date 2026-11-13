@@ -18,6 +18,7 @@ export function CookingFinishDialog({
   const [rating, setRating] = useState(5);
   const [note, setNote] = useState("");
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function save() {
@@ -27,6 +28,7 @@ export function CookingFinishDialog({
     }
     try {
       setPending(true);
+      setError(null);
       const res = await clientFetch(`/history`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -40,9 +42,15 @@ export function CookingFinishDialog({
         router.push(`/login?next=${encodeURIComponent(`/recipe/${recipeId}/cook`)}`);
         return;
       }
+      if (!res.ok) {
+        setError("Түүхэнд хадгалах боломжгүй байна. Дахин оролдоорой.");
+        return;
+      }
       onClose();
       router.replace(`/recipe/${recipeId}`);
     } catch {
+      setError("Холболт тасарсан байна. Дахин оролдоорой.");
+    } finally {
       setPending(false);
     }
   }
@@ -78,6 +86,7 @@ export function CookingFinishDialog({
           onChange={(e) => setNote(e.target.value)}
           className="w-full rounded-2xl bg-zinc-900 border border-white/10 p-3 text-sm min-h-[80px]"
         />
+        {error && <p role="alert" className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-100">{error}</p>}
         <div className="flex gap-2 justify-end">
           <button
             type="button"

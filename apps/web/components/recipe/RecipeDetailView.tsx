@@ -179,7 +179,7 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
 
       {data.steps.length > 0 && <Link
         href={`/recipe/${data.recipe.id}/cook?serves=${serves}`}
-        className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-30 inline-flex min-w-[220px] -translate-x-1/2 justify-center rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg shadow-[#276440]/20 touch-manipulation md:bottom-6"
+        className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-30 inline-flex min-w-[220px] -translate-x-1/2 justify-center rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg shadow-[#276440]/20 touch-manipulation lg:bottom-6"
         style={{ backgroundColor: "var(--figma-primary)" }}
       >
         Алхмаар хоол хийх
