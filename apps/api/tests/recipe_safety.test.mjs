@@ -71,3 +71,40 @@ test("publication requires editorial approval, content rights and complete ingre
   assert.ok(validate({ ...valid, metadata: { review_status: "approved" } }).includes("publish_requires_content_rights"));
   assert.ok(validate({ ...valid, ingredients: [] }).includes("publish_requires_ingredients"));
 });
+
+test("pantry matcher binds ingredient parameters before filter parameters", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { createRequire } = await import("node:module");
+  const require = createRequire(new URL("../package.json", import.meta.url));
+  const ts = require("typescript");
+  const content = readFileSync(new URL("../src/lib/suggestData.ts", import.meta.url), "utf8");
+  const compiled = ts.transpileModule(content, { compilerOptions: {
+    module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
+  } }).outputText;
+  const mod = { exports: {} };
+  new Function("require", "module", "exports", compiled)(
+    name => {
+      if (name === "./suggestBodyParse") return {
+        sqlPlaceholders: n => n ? "(" + Array.from({length:n},()=>"?").join(",") + ")" : "(NULL)",
+      };
+      throw new Error("Unexpected module: " + name);
+    }, mod, mod.exports,
+  );
+  let preparedSql = "";
+  let preparedBinds = [];
+  const db = { prepare(sql) {
+    preparedSql = sql;
+    return { bind(...args) {
+      preparedBinds = args;
+      return { all: async () => ({ results: [
+        {recipe_id:"r1",title:"Rice with egg",matched_rows:1,total_rows:2},
+      ] }) };
+    } };
+  } };
+  const res = await mod.exports.scoreMatchingRecipes(
+    db, ["egg"], ["canonical-egg"], {max_total_minutes:30,max_difficulty:2},
+  );
+  assert.deepEqual(preparedBinds, ["canonical-egg", "egg", 30, 2]);
+  assert.match(preparedSql, /prep_time \+ r\.cook_time\) > 0/);
+  assert.equal(res.length, 1);
+});
