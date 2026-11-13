@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { RecipeGrid } from "@/components/recipe/RecipeGrid";
 import { clientFetch } from "@/lib/clientApi";
 import type { RecipeListItem } from "@/lib/types";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const primary = "#276440";
 
@@ -17,22 +17,34 @@ export function SearchView({ initialQ }: { initialQ: string }) {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextPage, setNextPage] = useState(2);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState(false);
+  const currentQueryRef = useRef(initialQ);
 
   useEffect(() => {
     setQ(initialQ);
+    currentQueryRef.current = initialQ;
   }, [initialQ]);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setFailed(false);
+    setMoreError(false);
+    setHasMore(false);
+    setNextPage(2);
     const timer = setTimeout(async () => {
       try {
         const tail = q.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
         const res = await clientFetch(`/recipes${tail}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`Search failed: ${res.status}`);
-        const data = (await res.json()) as { recipes: RecipeListItem[] };
-        if (!controller.signal.aborted) setRecipes(data.recipes ?? []);
+        const data = (await res.json()) as { recipes: RecipeListItem[]; pagination?: { has_more: boolean } };
+        if (!controller.signal.aborted) {
+          setRecipes(data.recipes ?? []);
+          setHasMore(Boolean(data.pagination?.has_more));
+        }
       } catch {
         if (!controller.signal.aborted) {
           setFailed(true);
@@ -47,6 +59,32 @@ export function SearchView({ initialQ }: { initialQ: string }) {
       controller.abort();
     };
   }, [q, retry]);
+
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    const search = q.trim();
+    const page = nextPage;
+    setLoadingMore(true);
+    setMoreError(false);
+    try {
+      const qs = new URLSearchParams({ page: String(page) });
+      if (search) qs.set("q", search);
+      const res = await clientFetch(`/recipes?${qs.toString()}`);
+      if (!res.ok) throw new Error("load_more_failed");
+      const data = (await res.json()) as { recipes: RecipeListItem[]; pagination?: { has_more: boolean } };
+      if (currentQueryRef.current !== q) return;
+      setRecipes(prev => {
+        const seen = new Set(prev.map(x => x.id));
+        return [...prev, ...(data.recipes ?? []).filter(x => !seen.has(x.id))];
+      });
+      setHasMore(Boolean(data.pagination?.has_more));
+      setNextPage(page + 1);
+    } catch {
+      if (currentQueryRef.current === q) setMoreError(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   function commitSearch(next: string) {
     const t = next.trim();
@@ -76,7 +114,7 @@ export function SearchView({ initialQ }: { initialQ: string }) {
           <input
             aria-label="Хоол эсвэл орц хайх"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => { currentQueryRef.current = e.target.value; setQ(e.target.value); }}
             onKeyDown={(e) => e.key === "Enter" && commitSearch(q)}
             placeholder="Хоол эсвэл орц хайх…"
             className="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none"
@@ -86,6 +124,7 @@ export function SearchView({ initialQ }: { initialQ: string }) {
               type="button"
               aria-label="Clear"
               onClick={() => {
+                currentQueryRef.current = "";
                 setQ("");
                 commitSearch("");
               }}
@@ -123,7 +162,15 @@ export function SearchView({ initialQ }: { initialQ: string }) {
           </Link>
         </div>
       ) : (
-        <RecipeGrid recipes={recipes} />
+        <div className="space-y-5">
+          <p className="text-sm font-medium text-zinc-600">{recipes.length} жор харагдаж байна</p>
+          <RecipeGrid recipes={recipes} />
+          {hasMore && <button type="button" disabled={loadingMore} onClick={() => void loadMore()}
+            className="mx-auto block min-h-12 rounded-xl bg-[#276440] px-6 text-sm font-semibold text-white disabled:opacity-50">
+            {loadingMore ? "Ачаалж байна…" : "Илүү жор үзэх"}
+          </button>}
+          {moreError && <p role="alert" className="text-center text-sm text-amber-700">Нэмэлт жор ачаалж чадсангүй. Дахин оролдоорой.</p>}
+        </div>
       )}
     </main>
   );
