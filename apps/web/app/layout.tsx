@@ -1,6 +1,6 @@
 import { AuthProvider } from "@/components/auth/AuthContext";
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Noto_Sans, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 
@@ -21,9 +21,10 @@ const swProdRegister = `
   navigator.serviceWorker.register("/sw.js").catch(function () {});
 })();`;
 
-const geistSans = Geist({
+const geistSans = Noto_Sans({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "cyrillic"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -32,8 +33,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Food Ingredients",
-  description: "Recipe browser, cooking mode, and pantry matching",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://food-ingredients-web.osohoo691016.workers.dev"),
+  title: { default: "Food Ingredients — Өнөөдөр юу идэх вэ?", template: "%s | Food Ingredients" },
+  description: "Хөргөгчийн орцоороо хоол олоорой. Монгол хэл дээрх жор, алхамчилсан заавар, хоолны төлөвлөгөө.",
+  openGraph: {
+    type: "website",
+    locale: "mn_MN",
+    title: "Food Ingredients — Өнөөдөр юу идэх вэ?",
+    description: "Орцоо сонгоод тохирох хоолоо олоорой.",
+  },
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
