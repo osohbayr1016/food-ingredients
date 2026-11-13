@@ -17,6 +17,7 @@ export type IngredientPreviewOut = {
   note: string | null;
   matched: boolean;
   quantity_issue?: boolean;
+  quantity_status?: "enough" | "shortfall" | "unknown" | "missing";
 };
 
 export function buildIngredientPreview(

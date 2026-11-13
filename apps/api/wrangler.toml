@@ -20,6 +20,8 @@ bucket_name = "food-ingredients-images"
 [vars]
 # Import disabled unless explicitly enabled after licensing and production-key review.
 AUTO_IMPORT_ENABLED = "false"
+# Requires explicit approval and queueing for every recipe. Opt-in before deployment.
+AUTO_DAILY_PUBLISH = "false"
 PUBLIC_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://food-ingredients-web.pages.dev,https://food-ingredients-web.osohoo691016.workers.dev"
 R2_PUBLIC_BASE_URL = "https://pub-10e5fb7fa4594b528d76dcc4cc0272a4.r2.dev"
 R2_BUCKET_NAME = "food-ingredients-images"

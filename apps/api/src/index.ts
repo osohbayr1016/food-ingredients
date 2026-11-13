@@ -12,6 +12,7 @@ import { saved } from "./routes/saved";
 import { admin } from "./routes/admin";
 import { meNutrition } from "./routes/meNutrition";
 import { importDailyCandidate } from "./lib/dailyRecipeImport";
+import { publishOneApprovedRecipe } from "./lib/dailyApprovedPublish";
 
 const app = new Hono<{ Bindings: Env }>();
 app.use("*", corsMw);
@@ -25,6 +26,7 @@ app.get("/health/ready", async (c) => {
     await c.env.DB.prepare("SELECT 1 FROM recipes LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM recipe_metadata LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM auth_rate_limits LIMIT 1").all();
+    await c.env.DB.prepare("SELECT 1 FROM recipe_publication_queue LIMIT 1").all();
     return c.json({ ok: true, database: "ready" });
   } catch (error) {
     console.error("health/ready", error);
@@ -50,6 +52,14 @@ export default {
         console.log("daily recipe import:", result);
       }).catch((error) => {
         console.error("daily recipe import failed", error);
+        throw error;
+      }),
+    );
+    ctx.waitUntil(
+      publishOneApprovedRecipe(env).then(result => {
+        console.log("daily approved publication:", result);
+      }).catch(error => {
+        console.error("daily approved publication failed", error);
         throw error;
       }),
     );

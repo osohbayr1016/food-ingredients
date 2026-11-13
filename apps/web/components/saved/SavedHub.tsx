@@ -24,35 +24,55 @@ export function SavedHub() {
   const [saved, setSaved] = useState<Array<RecipeListItem & { saved_at?: string }>>([]);
   const [hist, setHist] = useState<Hist[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    let controller = new AbortController();
+    const load = async () => {
+      controller.abort();
+      controller = new AbortController();
       if (!user) {
         setSaved([]);
         setHist([]);
+        setErr(null);
+        setLoading(false);
         return;
       }
+      setLoading(true);
+      setErr(null);
       try {
-        const [sa, hi] = await Promise.all([clientFetch("/saved"), clientFetch("/history")]);
-        const savedJson = (await sa.json()) as {
-          saved: Record<string, unknown>[];
-        };
-        const histJson = (await hi.json()) as {
-          history: Hist[];
-        };
-        if (!cancelled) {
-          setSaved(savedJson.saved as RecipeListItem[] & { saved_at?: string });
-          setHist(histJson.history ?? []);
+        const [sa, hi] = await Promise.all([
+          clientFetch("/saved", { signal: controller.signal }),
+          clientFetch("/history", { signal: controller.signal }),
+        ]);
+        if (!sa.ok || !hi.ok) throw new Error("library_request_failed");
+        const savedJson = await sa.json() as { saved?: RecipeListItem[] };
+        const histJson = await hi.json() as { history?: Hist[] };
+        if (!Array.isArray(savedJson.saved) || !Array.isArray(histJson.history)) {
+          throw new Error("library_invalid_response");
+        }
+        if (!cancelled && !controller.signal.aborted) {
+          setSaved(savedJson.saved);
+          setHist(histJson.history);
         }
       } catch {
-        if (!cancelled) setErr("Жор ачаалахад алдаа гарлаа.");
+        if (!cancelled && !controller.signal.aborted)
+          setErr("Хадгалсан жор болон түүхийг ачаалж чадсангүй.");
+      } finally {
+        if (!cancelled && !controller.signal.aborted) setLoading(false);
       }
-    })();
+    };
+    void load();
+    const refresh = () => { void load(); };
+    window.addEventListener("food-library-changed", refresh);
     return () => {
       cancelled = true;
+      controller.abort();
+      window.removeEventListener("food-library-changed", refresh);
     };
-  }, [user]);
+  }, [user?.id, retry]);
 
   const tabs = (
     <div className="mb-4 flex gap-2 rounded-full border border-zinc-200 bg-zinc-50 p-1">
@@ -104,14 +124,14 @@ export function SavedHub() {
       <header className="flex items-center justify-between gap-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-(--figma-primary)">
-            Library
+            Миний цуглуулга
           </p>
-          <h1 className="text-2xl font-bold text-zinc-900">Миний ном</h1>
+          <h1 className="text-2xl font-bold text-zinc-900">Хадгалсан жорууд</h1>
           <p className="mt-1 text-sm text-zinc-500">Таны бүртгэлтэй холбогдсон.</p>
         </div>
         <Link
           href="/search"
-          aria-label="Search"
+          aria-label="Жор хайх"
           className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 touch-manipulation"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -121,8 +141,13 @@ export function SavedHub() {
         </Link>
       </header>
       {tabs}
-      {err && <p className="text-sm text-red-600">{err}</p>}
-      {tab === "saved" ? (
+      {err && <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        {err}
+        <button type="button" onClick={() => setRetry(n => n + 1)}
+          className="ml-3 font-semibold underline">Дахин оролдох</button>
+      </div>}
+      {loading && <p role="status" className="rounded-2xl bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-500">Миний жорууд ачаалж байна…</p>}
+      {!loading && !err && (tab === "saved" ? (
         saved.length ? (
           <RecipeGrid recipes={saved} />
         ) : (
@@ -130,7 +155,7 @@ export function SavedHub() {
         )
       ) : (
         <HistoryList rows={hist} />
-      )}
+      ))}
     </main>
   );
 }

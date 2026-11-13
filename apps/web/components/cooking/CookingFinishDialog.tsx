@@ -9,10 +9,12 @@ export function CookingFinishDialog({
   open,
   recipeId,
   onClose,
+  onSaved,
 }: {
   open: boolean;
   recipeId: string;
   onClose: () => void;
+  onSaved?: () => void;
 }) {
   const { user, ready } = useAuth();
   const [rating, setRating] = useState(5);
@@ -46,6 +48,7 @@ export function CookingFinishDialog({
         setError("Түүхэнд хадгалах боломжгүй байна. Дахин оролдоорой.");
         return;
       }
+      onSaved?.();
       onClose();
       router.replace(`/recipe/${recipeId}`);
     } catch {

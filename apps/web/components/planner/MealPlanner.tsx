@@ -16,6 +16,20 @@ const MEALS: { id: Meal; title: string }[] = [
 const PLAN_KEY = "food-ingredients-week-plan-v2";
 const CHECKED_KEY = "food-ingredients-groceries-checked-v2";
 const LEGACY_PLAN_KEY = "food-ingredients-week-plan-v1";
+/** Public recipe detail cache avoids refetching all 21 slots on every portion edit. */
+const recipeDetailCache = new Map<string, { data: RecipeDetail; expires: number }>();
+async function getPlannedRecipeDetail(id: string, signal: AbortSignal): Promise<RecipeDetail> {
+  const cached = recipeDetailCache.get(id);
+  if (cached && cached.expires > Date.now()) return cached.data;
+  const response = await clientFetch(`/recipes/${encodeURIComponent(id)}`, { signal });
+  if (!response.ok) throw new Error("Recipe fetch failed");
+  const data = await response.json() as RecipeDetail;
+  recipeDetailCache.set(id, { data, expires: Date.now() + 5 * 60 * 1000 });
+  if (recipeDetailCache.size > 100) {
+    recipeDetailCache.delete(recipeDetailCache.keys().next().value!);
+  }
+  return data;
+}
 
 export function MealPlanner({ recipes }: { recipes: RecipeListItem[] }) {
   const [offset, setOffset] = useState(0);
@@ -67,6 +81,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
   const [portions, setPortions] = useState<Record<string,number>>({});
   const [titles, setTitles] = useState<Record<string,string>>({});
   const [searchResults, setSearchResults] = useState<RecipeListItem[] | null>(null);
+  const [selectedMeta, setSelectedMeta] = useState<Record<string, { title: string; serves: number }>>({});
   const [searchError, setSearchError] = useState(false);
   const [searchBusy, setSearchBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -165,11 +180,12 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
     setLoadError(false);
     (async () => {
       try {
-        const details = await Promise.all(distinctIds.map(async id => {
-          const response = await clientFetch(`/recipes/${encodeURIComponent(id)}`, {signal:controller.signal});
-          if (!response.ok) throw new Error("Recipe fetch failed");
-          return await response.json() as RecipeDetail;
-        }));
+        const details = await Promise.all(distinctIds.map(id => getPlannedRecipeDetail(id,controller.signal)));
+        if (!controller.signal.aborted) {
+          setSelectedMeta(Object.fromEntries(distinctIds.map((id,i) => [
+            id, { title: details[i].recipe.title, serves: Math.max(1,details[i].recipe.serves) },
+          ])));
+        }
         const detailMap = new Map(distinctIds.map((id,index) => [id,details[index]]));
         let pantry = [] as ReturnType<typeof parsePantryStorage>;
         try { pantry = usablePantry(parsePantryStorage(localStorage.getItem(PANTRY_STORAGE_KEY)),todayLocalIso()); }
@@ -242,7 +258,8 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
           {MEALS.map(meal => {
             const key = `${day}|${meal.id}`, chosen = plan[key] ?? "";
             const selectedRecipe = matchingRecipes.find(x => x.id === chosen) ?? recipes.find(x=>x.id===chosen);
-            const defaultPortions = Math.max(1,selectedRecipe?.serves ?? 1);
+            const defaultPortions = Math.max(1,selectedRecipe?.serves ?? selectedMeta[chosen]?.serves ?? 1);
+            const servesKnown = !chosen || !!selectedRecipe || !!selectedMeta[chosen];
             return (
               <div key={meal.id} className="rounded-2xl bg-[#f5f9f3] p-4">
                 <label className="block text-sm font-bold text-[#31573d]">{meal.title}
@@ -255,7 +272,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
                   }}
                     className="mt-3 min-h-11 w-full rounded-xl border border-[#d7e4d3] bg-white px-3 py-2 text-sm font-normal text-[#293d2e]">
                     <option value="">Хоол сонгох</option>
-                    {chosen && !selectedRecipe && <option value={chosen}>{titles[chosen] ?? "Өмнө сонгосон жор"}</option>}
+                    {chosen && !selectedRecipe && <option value={chosen}>{selectedMeta[chosen]?.title ?? titles[chosen] ?? "Өмнө сонгосон жор"}</option>}
                     {matchingRecipes.map(recipe => <option key={recipe.id} value={recipe.id}>{recipe.title}</option>)}
                   </select>
                 </label>
@@ -264,6 +281,8 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
                     Порц
                     <input type="number" min="1" max="30" step="1"
                       value={portions[key] ?? defaultPortions}
+                      disabled={!servesKnown}
+                      title={!servesKnown ? "Жорын анхны порцыг ачаалж байна" : undefined}
                       onChange={e => {
                         const number = Number(e.target.value);
                         if (Number.isSafeInteger(number) && number >= 1 && number <= 30)

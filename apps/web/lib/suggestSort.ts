@@ -19,10 +19,11 @@ export function sortSuggestRows(
     case "serves":
       return copy.sort((a, b) => a.serves - b.serves);
     default:
-      return copy.sort(
-        (a, b) =>
-          b.match_ratio - a.match_ratio ||
-          b.matched_count - a.matched_count,
-      );
+      return copy.sort((a,b) => {
+        const rank = (x: SuggestResultRow) => x.availability === "quantities_match" ? 0 :
+          x.availability === "check_quantities" ? 1 : 2;
+        return rank(a) - rank(b) || b.match_ratio - a.match_ratio ||
+          b.matched_count - a.matched_count;
+      });
   }
 }

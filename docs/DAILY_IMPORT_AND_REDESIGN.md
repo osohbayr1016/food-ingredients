@@ -36,3 +36,12 @@ Never infer allergen-free status from missing tags. Never invent protein/calorie
 - After deployment, manually verify login, cooking mode, pantry query, user preferences, media upload and a recipe preview on a mobile device.
 - All existing recipes without v2 editorial metadata display unknown allergen status. Do not silently backfill allergen-free status.
 - Rate limiting uses hashed IP fixed-window counters and adds D1 writes; confirm free-tier quotas before high-volume traffic.
+
+## Cycle 5 — editorially approved daily publication (code only, no deployment)
+- Database migration: `apps/api/db/0010_publication_queue.sql`. Also included in full schema, idempotent migration tests, and the **manual** Cloudflare workflow. Apply before running new API code.
+- Admin → Жорын удирдлага: reviewer must first mark content rights, cooking times, steps and ingredients verified, then explicitly choose **Өдөр тутам нийтлэх**. Queue actions are reversible until publication.
+- Scheduler `publishOneApprovedRecipe` can release **at most one** approved, queued recipe per day at the existing 00:20 UTC cron. It rechecks publication eligibility immediately before release and records the publication timestamp.
+- `AUTO_DAILY_PUBLISH=false` by default. Enable only after reviewing operational controls, licensing, database migration and source provenance.
+- `AUTO_IMPORT_ENABLED=false` remains independently gated. External imports create unpublished drafts; they **never** enter the publication queue automatically.
+- An empty approved queue results in no publication; daily publishing is **not guaranteed** without a maintained, licensed review backlog.
+- Automated CI validates queue gating and idempotent schema setup. A green CI does not replace production migrations, reviewer training or real-device tests.
