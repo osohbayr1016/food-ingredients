@@ -4,7 +4,7 @@ import sqlite3
 root = pathlib.Path(__file__).resolve().parents[3]
 db = sqlite3.connect(":memory:")
 db.executescript((root / "apps/api/db/schema.sql").read_text())
-for file in ("0007_recipe_metadata.sql", "0008_auth_rate_limits.sql", "0009_recipe_search_indexes.sql", "0010_publication_queue.sql", "0011_unicode_recipe_search.sql"):
+for file in ("0007_recipe_metadata.sql", "0008_auth_rate_limits.sql", "0009_recipe_search_indexes.sql", "0010_publication_queue.sql", "0011_unicode_recipe_search.sql", "0012_publication_days.sql"):
     content = (root / "apps/api/db" / file).read_text()
     db.executescript(content)
     db.executescript(content)  # must be safe to retry
@@ -27,4 +27,7 @@ assert db.execute("SELECT recipe_id FROM recipe_search_fts WHERE recipe_search_f
 db.execute("UPDATE recipes SET title='Будаатай шөл' WHERE id='t'")
 assert not db.execute("SELECT recipe_id FROM recipe_search_fts WHERE recipe_search_fts MATCH ?", ('"тахиа"*',)).fetchall()
 assert db.execute("SELECT recipe_id FROM recipe_search_fts WHERE recipe_search_fts MATCH ?", ('"будаа"*',)).fetchone()[0] == 't'
+db.execute("INSERT OR IGNORE INTO recipe_publication_days(day_utc,recipe_id) VALUES ('2026-11-13','t')")
+db.execute("INSERT OR IGNORE INTO recipe_publication_days(day_utc,recipe_id) VALUES ('2026-11-13',NULL)")
+assert db.execute("SELECT recipe_id FROM recipe_publication_days WHERE day_utc='2026-11-13'").fetchone()[0] == 't'
 print("D1-compatible schema & migrations: smoke test passed")
