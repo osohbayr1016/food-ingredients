@@ -29,7 +29,7 @@ async function hmac(secret: string, data: string): Promise<string> {
   return b64url(new Uint8Array(sig));
 }
 
-export type JwtPayload = { sub: string; role: "user" | "admin" };
+export type JwtPayload = { sub: string; role: "user" | "admin"; ver?: number };
 
 export async function signJwt(
   payload: JwtPayload,
@@ -43,6 +43,7 @@ export async function signJwt(
       JSON.stringify({
         sub: payload.sub,
         role: payload.role,
+        ver: payload.ver ?? 0,
         iat: now,
         exp: now + ttlSec,
       }),
@@ -64,23 +65,23 @@ export async function verifyJwt(
   let diff = 0;
   for (let i = 0; i < sig.length; i++) diff |= sig.charCodeAt(i) ^ s.charCodeAt(i);
   if (diff !== 0) return null;
-  let json: { sub?: string; role?: string; exp?: number };
+  let json: { sub?: string; role?: string; exp?: number; ver?: number };
+  let header: { alg?: string; typ?: string };
   try {
-    json = JSON.parse(td.decode(b64urlToBytes(p))) as {
-      sub?: string;
-      role?: string;
-      exp?: number;
-    };
+    header = JSON.parse(td.decode(b64urlToBytes(h))) as {alg?:string;typ?:string};
+    json = JSON.parse(td.decode(b64urlToBytes(p))) as {sub?:string;role?:string;exp?:number;ver?:number};
   } catch {
     return null;
   }
   if (
-    typeof json.sub !== "string" ||
+    header.alg !== "HS256" || header.typ !== "JWT" ||
+    typeof json.sub !== "string" || !json.sub ||
     (json.role !== "user" && json.role !== "admin") ||
-    typeof json.exp !== "number"
+    typeof json.exp !== "number" || !Number.isSafeInteger(json.exp) ||
+    (json.ver !== undefined && (!Number.isSafeInteger(json.ver) || json.ver < 0))
   ) {
     return null;
   }
   if (json.exp < Math.floor(Date.now() / 1000)) return null;
-  return { sub: json.sub, role: json.role };
+  return { sub: json.sub, role: json.role, ver: json.ver ?? 0 };
 }
