@@ -435,3 +435,12 @@ SELECT ic.id,ic.name,COALESCE((SELECT group_concat(a.alias,' ') FROM ingredient_
   WHERE a.canonical_id=ic.id),'')
 FROM ingredient_canonicals ic
 WHERE NOT EXISTS(SELECT 1 FROM ingredient_search_fts f WHERE f.canonical_id=ic.id);
+
+-- Per-account pantry snapshot. Changes require an exact revision match.
+-- No personal pantry data is stored for guests.
+CREATE TABLE IF NOT EXISTS user_pantry_snapshots (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  items_json TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(items_json)),
+  revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

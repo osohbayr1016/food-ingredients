@@ -4,7 +4,7 @@ import sqlite3
 root = pathlib.Path(__file__).resolve().parents[3]
 db = sqlite3.connect(":memory:")
 db.executescript((root / "apps/api/db/schema.sql").read_text())
-for file in ("0007_recipe_metadata.sql", "0008_auth_rate_limits.sql", "0009_recipe_search_indexes.sql", "0010_publication_queue.sql", "0011_unicode_recipe_search.sql", "0012_publication_days.sql", "0013_editorial_audit.sql", "0014_ingredient_unicode_fts.sql"):
+for file in ("0007_recipe_metadata.sql", "0008_auth_rate_limits.sql", "0009_recipe_search_indexes.sql", "0010_publication_queue.sql", "0011_unicode_recipe_search.sql", "0012_publication_days.sql", "0013_editorial_audit.sql", "0014_ingredient_unicode_fts.sql", "0015_user_pantry_snapshots.sql"):
     content = (root / "apps/api/db" / file).read_text()
     db.executescript(content)
     db.executescript(content)  # must be safe to retry
@@ -48,4 +48,11 @@ db.execute("UPDATE ingredient_aliases SET alias='Potato',normalized='potato' WHE
 assert db.execute("SELECT canonical_id FROM ingredient_search_fts WHERE ingredient_search_fts MATCH ?", ('"potato"*',)).fetchone()[0] == 'pot'
 db.execute("DELETE FROM ingredient_aliases WHERE id='al-pot'")
 assert not db.execute("SELECT canonical_id FROM ingredient_search_fts WHERE ingredient_search_fts MATCH ?", ('"potato"*',)).fetchall()
+db.execute("INSERT INTO users(id,username,password_hash,role) VALUES('user-sync','sync_test','test','user')")
+db.execute("INSERT INTO user_pantry_snapshots(user_id,items_json) VALUES('user-sync','[]')")
+result=db.execute("UPDATE user_pantry_snapshots SET items_json='[1]',revision=revision+1 WHERE user_id='user-sync' AND revision=1")
+assert result.rowcount == 1
+assert db.execute("UPDATE user_pantry_snapshots SET revision=revision+1 WHERE user_id='user-sync' AND revision=1").rowcount == 0
+db.execute("DELETE FROM users WHERE id='user-sync'")
+assert not db.execute("SELECT 1 FROM user_pantry_snapshots WHERE user_id='user-sync'").fetchone()
 print("D1-compatible schema & migrations: smoke test passed")
