@@ -39,6 +39,8 @@ jobs:
         run: node --experimental-strip-types --test apps/api/tests/pantry-sync.test.mjs
       - name: Pantry inventory unit tests
         run: node --experimental-strip-types --test apps/web/tests/pantry-inventory.test.mjs
+      - name: Guest favorites validation tests
+        run: node --experimental-strip-types --test apps/api/tests/guest-likes.test.mjs
       - name: Cooking session resume tests
         run: node --experimental-strip-types --test apps/web/tests/cooking-session.test.mjs
       - name: Quick weekly meal-planning tests
