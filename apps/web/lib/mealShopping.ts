@@ -49,7 +49,7 @@ export function convertQuantity(value: number, from: string, to: string): number
 }
 
 export function aggregateMealShopping(recipes: ShoppingRecipe[], pantry: ShoppingStock[] = []): ShoppingLine[] {
-  const grouped = new Map<string, ShoppingLine & { canonicalId: string }>();
+  const grouped = new Map<string, Array<ShoppingLine & { canonicalId: string }>>();
   for (const recipe of recipes) {
     const factor = recipe.plannedServes / recipe.baseServes;
     if (!Number.isFinite(factor) || factor <= 0 || factor > 100) continue;
@@ -57,11 +57,19 @@ export function aggregateMealShopping(recipes: ShoppingRecipe[], pantry: Shoppin
       const qty = ing.quantity * factor;
       if (!ing.name.trim() || !Number.isFinite(qty) || qty <= 0) continue;
       const canonicalId = ing.ingredient_canonical_id ?? "";
-      const key = `${canonicalId || norm(ing.name)}|${norm(ing.unit)}`;
-      const prior = grouped.get(key);
-      if (prior) prior.quantity += qty;
-      else grouped.set(key, {key, canonicalId, name: ing.name.trim(), unit: ing.unit.trim(),
-        quantity: qty, stockUncertain: false});
+      const identity = canonicalId || norm(ing.name);
+      const lines = grouped.get(identity) ?? [];
+      // Group compatible units (1 kg + 200 g) without guessing density.
+      const prior = lines.find(line => convertQuantity(qty,ing.unit,line.unit) !== null);
+      if (prior) {
+        prior.quantity += convertQuantity(qty,ing.unit,prior.unit) ?? 0;
+      } else {
+        lines.push({
+          key: `${identity}|${norm(ing.unit)}`, canonicalId,
+          name:ing.name.trim(),unit:ing.unit.trim(),quantity:qty,stockUncertain:false,
+        });
+        grouped.set(identity,lines);
+      }
     }
   }
   const stock = pantry.map(item => {
@@ -70,7 +78,7 @@ export function aggregateMealShopping(recipes: ShoppingRecipe[], pantry: Shoppin
     return { ...item, quantityLeft: Number.isFinite(parsed) && parsed > 0 ? parsed : null };
   });
   const out: ShoppingLine[] = [];
-  for (const line of grouped.values()) {
+  for (const line of [...grouped.values()].flat()) {
     let remaining = line.quantity;
     let stockUncertain = false;
     for (const pantryItem of stock) {
