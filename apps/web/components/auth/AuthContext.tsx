@@ -1,6 +1,8 @@
 "use client";
 
 import { clientFetch } from "@/lib/clientApi";
+import { invalidateRecipeLibraryIds } from "@/lib/recipeLibraryCache";
+import { dispatchLibrary } from "@/lib/profileStorage";
 import {
   clearAuthToken,
   getAuthToken,
@@ -46,10 +48,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       return;
     }
-    const res = await clientFetch("/auth/me");
-    const data = (await res.json()) as { user: AuthUser | null };
-    setUser(data.user ?? null);
-    if (!data.user) clearAuthToken();
+    try {
+      const res = await clientFetch("/auth/me");
+      if (!res.ok) {
+        setUser(null);
+        return; // A temporary server error must not destroy the existing token.
+      }
+      const data = (await res.json()) as { user: AuthUser | null };
+      setUser(data.user ?? null);
+      if (!data.user) clearAuthToken();
+    } catch {
+      setUser(null); // Offline: retain token for a later sign-in check.
+    }
   }, []);
 
   useEffect(() => {
@@ -74,8 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const data = (await res.json()) as { token: string; user: AuthUser };
     setAuthToken(data.token);
+    if (getAuthToken() !== data.token) throw new Error("browser_storage_unavailable");
+    invalidateRecipeLibraryIds();
     setTok(data.token);
     setUser(data.user);
+    dispatchLibrary();
   }, []);
 
   const register = useCallback(async (username: string, password: string) => {
@@ -95,9 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    invalidateRecipeLibraryIds();
     clearAuthToken();
     setTok("");
     setUser(null);
+    dispatchLibrary();
   }, []);
 
   const value = useMemo(
