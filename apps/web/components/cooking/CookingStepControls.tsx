@@ -8,6 +8,7 @@ export function CookingStepControls({
   total,
   onPrev,
   onNext,
+  onFinish,
   onIngredients,
 }: {
   recipeId: string;
@@ -15,6 +16,7 @@ export function CookingStepControls({
   total: number;
   onPrev: () => void;
   onNext: () => void;
+  onFinish: () => void;
   onIngredients: () => void;
 }) {
   const atStart = index <= 0;
@@ -33,11 +35,11 @@ export function CookingStepControls({
         </button>
         <button
           type="button"
-          disabled={atEnd}
-          onClick={onNext}
+          disabled={total===0}
+          onClick={atEnd ? onFinish : onNext}
           className="min-h-[48px] min-w-0 flex-1 rounded-2xl bg-amber-500 py-3 text-sm font-semibold text-black touch-manipulation active:brightness-95 disabled:pointer-events-none disabled:opacity-30"
         >
-          Дараах
+          {atEnd ? "Хоолоо дуусгах" : "Дараагийн алхам"}
         </button>
       </div>
       <div className="mx-auto mt-3 flex max-w-xl items-center justify-center gap-4 px-4">

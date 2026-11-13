@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { bearerPayload } from "../lib/authBearer";
+import { parseGuestLikeIds } from "../lib/guestLikes";
 
 export const likes = new Hono<{ Bindings: Env }>();
 
@@ -36,6 +37,30 @@ likes.post("/likes", async (c) => {
     .bind(jwt.sub, recipeId)
     .run();
   return c.json({ ok: true });
+});
+
+/** Opt-in guest favorites transfer, scoped to the signed-in account. */
+likes.post("/likes/import-guest", async c=>{
+  const jwt=await bearerPayload(c);
+  if(!jwt)return c.json({error:"auth_required"},401);
+  const body=await c.req.json().catch(()=>null) as {recipe_ids?:unknown}|null;
+  const ids=parseGuestLikeIds(body?.recipe_ids);
+  if(!ids)return c.json({error:"invalid_recipe_ids"},400);
+  const placeholders=ids.map(()=>"?").join(",");
+  try{
+    const {results}=await c.env.DB.prepare(
+      `SELECT id FROM recipes WHERE is_published=1 AND id IN (${placeholders})`
+    ).bind(...ids).all<{id:string}>();
+    const accepted=(results??[]).map(x=>x.id);
+    if(accepted.length)await c.env.DB.batch(accepted.map(recipeId=>
+      c.env.DB.prepare("INSERT OR IGNORE INTO recipe_likes(user_id,recipe_id) VALUES(?,?)")
+        .bind(jwt.sub,recipeId)
+    ));
+    return c.json({ok:true,accepted_ids:accepted,skipped:ids.length-accepted.length});
+  }catch(error){
+    console.error("likes import guest",error);
+    return c.json({error:"likes_import_unavailable"},503);
+  }
 });
 
 likes.delete("/likes/:recipeId", async (c) => {

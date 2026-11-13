@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RecipeGrid } from "@/components/recipe/RecipeGrid";
+import { ALLERGEN_OPTIONS } from "@/lib/recipeMetadata";
 import { clientFetch } from "@/lib/clientApi";
 import type { RecipeListItem } from "@/lib/types";
 import { useEffect, useRef, useState } from "react";
@@ -34,13 +35,18 @@ export function SearchView({ initialQ }: { initialQ: string }) {
   const activeRequest = useRef("");
   const time = params?.get("max_cook_time") ?? "";
   const easy = params?.get("difficulty") === "1";
+  const allergens = params?.get("exclude_allergens") ?? "";
+  const maxCalories = params?.get("max_calories") ?? "";
+  const minProtein = params?.get("min_protein") ?? "";
+  const filtersKey = [allergens,maxCalories,minProtein].join("|");
+  const [advancedOpen,setAdvancedOpen] = useState(() => Boolean(allergens || maxCalories || minProtein));
 
   useEffect(() => { setQuery(initialQ); }, [initialQ]);
 
-  const signature = [query.trim(), time, easy ? "easy" : ""].join("|");
+  const signature = [query.trim(), time, easy ? "easy" : "",filtersKey].join("|");
   useEffect(() => {
     const controller = new AbortController();
-    const key = [query.trim(), time, easy ? "easy" : ""].join("|");
+    const key = [query.trim(), time, easy ? "easy" : "",filtersKey].join("|");
     activeRequest.current = key;
     setLoading(true);
     setFailed(false);
@@ -53,6 +59,9 @@ export function SearchView({ initialQ }: { initialQ: string }) {
         if (query.trim()) qs.set("q", query.trim());
         if (time) qs.set("max_cook_time", time);
         if (easy) qs.set("difficulty", "1");
+        if (allergens) qs.set("exclude_allergens",allergens);
+        if (maxCalories) qs.set("max_calories",maxCalories);
+        if (minProtein) qs.set("min_protein",minProtein);
         const response = await clientFetch(`/recipes?${qs.toString()}`, { signal: controller.signal });
         if (!response.ok) throw new Error("search_failed");
         const data = await response.json() as RecipePage;
@@ -69,7 +78,7 @@ export function SearchView({ initialQ }: { initialQ: string }) {
       }
     }, query.trim() ? 280 : 0);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [query, time, easy, retry]);
+  }, [query, time, easy, filtersKey, allergens, maxCalories, minProtein, retry]);
 
   function setUrlPatch(changes: Record<string, string>) {
     const next = new URLSearchParams(params?.toString());
@@ -93,6 +102,9 @@ export function SearchView({ initialQ }: { initialQ: string }) {
       if (query.trim()) qs.set("q", query.trim());
       if (time) qs.set("max_cook_time", time);
       if (easy) qs.set("difficulty", "1");
+      if (allergens) qs.set("exclude_allergens",allergens);
+      if (maxCalories) qs.set("max_calories",maxCalories);
+      if (minProtein) qs.set("min_protein",minProtein);
       const response = await clientFetch(`/recipes?${qs.toString()}`);
       if (!response.ok) throw new Error("pagination_failed");
       const data = await response.json() as RecipePage;
@@ -147,6 +159,62 @@ export function SearchView({ initialQ }: { initialQ: string }) {
             className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${easy
               ? "bg-[#276440] text-white" : "border border-[#e0e9db] bg-white text-[#366546] hover:bg-[#eff6ea]"}`}>Хялбар</button>
         </div>
+        <details open={advancedOpen} onToggle={event=>setAdvancedOpen(event.currentTarget.open)}
+          className="rounded-2xl border border-[#e0e9db] bg-white p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-[#356a46]">
+            Харшил, уураг, илчлэгээр шүүх (сонголтоор)
+          </summary>
+          <div className="space-y-4 pt-4">
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-bold text-[#365b43]">Орцын харшил үүсгэгчийг хасах</legend>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {ALLERGEN_OPTIONS.map(([code,label]) => {
+                  const selected=new Set(allergens.split(",").filter(Boolean));
+                  return <label key={code}
+                    className="flex min-h-11 items-center gap-2 rounded-xl bg-[#f6faf3] px-3 text-xs font-semibold text-[#315d40]">
+                    <input type="checkbox" checked={selected.has(code)}
+                      onChange={event=>{
+                        if(event.target.checked)selected.add(code);else selected.delete(code);
+                        setUrlPatch({exclude_allergens:[...selected].join(",")});
+                      }} className="h-5 w-5 accent-[#276440]"/>
+                    {label}
+                  </label>;
+                })}
+              </div>
+              <p className="text-xs leading-relaxed text-amber-800">
+                Зөвхөн эх сурвалжтай, орцын жагсаалт нь хянагдсан жорууд харагдана.
+                Энэ шүүлтүүр нь харшлын аюулгүй байдлыг батлахгүй: савлагаа болон бохирдлыг шалгаарай.
+              </p>
+            </fieldset>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-xs font-semibold text-[#365b43]">Доод уураг (г / порц)
+                <input type="number" min="0" max="1000" step="1" inputMode="numeric"
+                  key={`protein-${minProtein}`} defaultValue={minProtein} placeholder="Хязгааргүй"
+                  onBlur={event=>{
+                    const n=Number(event.target.value);
+                    const value=event.target.value.trim() && Number.isFinite(n) && n>=0 && n<=1000 ? String(n) : "";
+                    if(value!==minProtein)setUrlPatch({min_protein:value});
+                  }}
+                  className="mt-1 min-h-11 w-full rounded-xl border border-[#dce8d8] bg-white px-3 text-base font-normal"/>
+              </label>
+              <label className="text-xs font-semibold text-[#365b43]">Дээд илчлэг (ккал / порц)
+                <input type="number" min="1" max="10000" step="1" inputMode="numeric"
+                  key={`calories-${maxCalories}`} defaultValue={maxCalories} placeholder="Хязгааргүй"
+                  onBlur={event=>{
+                    const n=Number(event.target.value);
+                    const value=event.target.value.trim() && Number.isFinite(n) && n>=1 && n<=10000 ? String(n) : "";
+                    if(value!==maxCalories)setUrlPatch({max_calories:value});
+                  }}
+                  className="mt-1 min-h-11 w-full rounded-xl border border-[#dce8d8] bg-white px-3 text-base font-normal"/>
+              </label>
+            </div>
+            {(allergens || maxCalories || minProtein) && <button type="button"
+              onClick={()=>setUrlPatch({exclude_allergens:"",max_calories:"",min_protein:""})}
+              className="min-h-10 text-xs font-bold text-[#276440] underline underline-offset-4">
+              Нарийвчилсан шүүлтүүр арилгах
+            </button>}
+          </div>
+        </details>
         {(time || easy) && <button type="button" onClick={() => setUrlPatch({max_cook_time:"",difficulty:""})}
           className="min-h-9 text-xs font-semibold text-[#276440] underline underline-offset-4">Шүүлтүүр арилгах</button>}
       </section>
@@ -168,7 +236,7 @@ export function SearchView({ initialQ }: { initialQ: string }) {
           <h2 className="text-lg font-bold text-[#213d2c]">Тохирох жор олдсонгүй</h2>
           <p className="mx-auto max-w-sm text-sm text-[#6b8071]">Өөр орц бичих эсвэл хугацааны шүүлтүүрээ суллаарай.</p>
           <div className="flex flex-wrap justify-center gap-3">
-            <button type="button" onClick={() => {setQuery("");setUrlPatch({q:"",max_cook_time:"",difficulty:""});}}
+            <button type="button" onClick={() => {setQuery("");setUrlPatch({q:"",max_cook_time:"",difficulty:"",exclude_allergens:"",max_calories:"",min_protein:""});}}
               className="min-h-11 rounded-xl bg-[#edf6e8] px-4 text-sm font-semibold text-[#276440]">Бүх жор үзэх</button>
             <Link href="/pantry" className="inline-flex min-h-11 items-center rounded-xl border border-[#d8e5d2] px-4 text-sm font-semibold text-[#276440]">
               Орцоороо хайх

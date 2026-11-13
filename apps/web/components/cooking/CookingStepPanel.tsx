@@ -6,17 +6,13 @@ import type { StepRow } from "@/lib/types";
 export function CookingStepPanel({
   step,
   index,
-  total,
   subs,
   upsert,
-  onFinish,
 }: {
   step: StepRow;
   index: number;
-  total: number;
   subs: Record<string, string>;
   upsert: (o: { id: string; label: string; seconds: number }) => void;
-  onFinish: () => void;
 }) {
   const body = step.description_template?.trim()
     ? interpolateStep(step.description_template, subs)
@@ -48,15 +44,7 @@ export function CookingStepPanel({
           Таймер эхлүүлэх ({step.timer_seconds}s)
         </button>
       )}
-      {index === total - 1 && (
-        <button
-          type="button"
-          className="mt-4 w-full max-w-xs rounded-full bg-amber-500 py-3.5 font-semibold text-black touch-manipulation active:brightness-95"
-          onClick={onFinish}
-        >
-          Дуусгах
-        </button>
-      )}
+
     </div>
   );
 }
