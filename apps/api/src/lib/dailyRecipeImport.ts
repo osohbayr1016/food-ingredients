@@ -44,7 +44,7 @@ export async function importDailyCandidate(env: Env): Promise<string> {
     patch.recipe.cook_time = 0;
     patch.metadata = {
       source_url: "https://www.themealdb.com/",
-      license_name: "TheMealDB — attribution required",
+      license_name: null, // review must establish source/media rights
       video_url: String(meal.strYoutube ?? "").trim() || null,
       review_status: "pending",
       allergen_status: "unknown",

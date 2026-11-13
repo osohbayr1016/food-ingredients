@@ -25,6 +25,7 @@ export function MealPlanner({ recipes }: { recipes: RecipeListItem[] }) {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [storageWarning, setStorageWarning] = useState(false);
 
   useEffect(() => {
     try {
@@ -43,10 +44,14 @@ export function MealPlanner({ recipes }: { recipes: RecipeListItem[] }) {
   }, []);
 
   useEffect(() => {
-    if (hydrated) localStorage.setItem(PLAN_KEY, JSON.stringify(plan));
+    if (!hydrated) return;
+    try { localStorage.setItem(PLAN_KEY, JSON.stringify(plan)); }
+    catch { setStorageWarning(true); }
   }, [hydrated,plan]);
   useEffect(() => {
-    if (hydrated) localStorage.setItem(CHECKED_KEY, JSON.stringify(checked));
+    if (!hydrated) return;
+    try { localStorage.setItem(CHECKED_KEY, JSON.stringify(checked)); }
+    catch { setStorageWarning(true); }
   }, [hydrated,checked]);
 
   useEffect(() => {
@@ -115,6 +120,7 @@ export function MealPlanner({ recipes }: { recipes: RecipeListItem[] }) {
         <h1 className="text-3xl font-bold tracking-tight text-[#213f2c]">7 хоногийн хоолны төлөвлөгөө</h1>
         <p className="text-sm leading-relaxed text-zinc-600">Өдөрт 3 хоолоо сонгоорой. Орцууд нэгтгэгдэж худалдан авах жагсаалт үүснэ. Таны төлөвлөгөө энэ төхөөрөмж дээр хадгалагдана.</p>
       </header>
+      {storageWarning && <p role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Browser-д хадгалах боломжгүй байна. Та табыг хаахаас өмнө төлөвлөгөөгөө тэмдэглэж аваарай.</p>}
       <section className="space-y-4 rounded-3xl border border-[#e0e9dd] bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-[#214632]">{filled}/21 хоол сонгосон</h2>

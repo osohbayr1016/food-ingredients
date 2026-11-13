@@ -15,33 +15,43 @@ export function SuggestPantryPicker({
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
   const [hits, setHits] = useState<Canon[]>([]);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const tRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const runSearch = useCallback(async (query: string) => {
-    const s = query.trim();
-    if (s.length < 1) {
+  const runSearch = useCallback(async (query: string, signal: AbortSignal) => {
+    const searchTerm = query.trim();
+    if (!searchTerm) {
       setHits([]);
+      setError(false);
+      setBusy(false);
       return;
     }
     setBusy(true);
+    setError(false);
     try {
       const res = await clientFetch(
-        `/ingredient-catalog?q=${encodeURIComponent(s)}`,
+        `/ingredient-catalog?q=${encodeURIComponent(searchTerm)}`,
+        { signal },
       );
+      if (!res.ok) throw new Error(`Ingredient search failed: ${res.status}`);
       const data = (await res.json()) as { canonicals?: Canon[] };
-      setHits(data.canonicals ?? []);
+      if (!signal.aborted) setHits(data.canonicals ?? []);
+    } catch {
+      if (!signal.aborted) {
+        setHits([]);
+        setError(true);
+      }
     } finally {
-      setBusy(false);
+      if (!signal.aborted) setBusy(false);
     }
   }, []);
 
   useEffect(() => {
-    if (tRef.current) clearTimeout(tRef.current);
-    tRef.current = setTimeout(() => runSearch(q), 220);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => { void runSearch(q, controller.signal); }, 220);
     return () => {
-      if (tRef.current) clearTimeout(tRef.current);
+      window.clearTimeout(timer);
+      controller.abort();
     };
   }, [q, runSearch]);
 
@@ -76,7 +86,10 @@ export function SuggestPantryPicker({
           {busy ? (
             <li className="px-4 py-3 text-sm text-zinc-500">Хайж байна…</li>
           ) : null}
-          {!busy && hits.length === 0 ? (
+          {error && !busy ? (
+            <li role="alert" className="px-4 py-3 text-sm text-amber-800">Орцын хайлт түр ажиллахгүй байна. Дахин оролдоорой.</li>
+          ) : null}
+          {!busy && !error && hits.length === 0 ? (
             <li className="px-4 py-3 text-sm text-zinc-500">
               Илэрц олдсонгүй
             </li>

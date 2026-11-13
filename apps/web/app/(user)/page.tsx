@@ -6,7 +6,7 @@ import type { RecipeListItem } from "@/lib/types";
 import { Suspense } from "react";
 
 const journeys = [
-  { href: "/suggest", icon: "🥕", title: "Байгаа орцоороо", detail: "Хөргөгчинд байгаа зүйлээрээ хоол олох", color: "bg-[#eef4e7]" },
+  { href: "/pantry", icon: "🥕", title: "Миний хөргөгч", detail: "Орцоо хадгалаад жор олох", color: "bg-[#eef4e7]" },
   { href: "/?max_cook_time=30", icon: "⏱", title: "Хурдан хоол", detail: "30 минут болон түүнээс бага", color: "bg-[#fff3df]" },
   { href: "/discover", icon: "🍲", title: "Шинэ жор", detail: "Дэлхийн хоолны санаанууд", color: "bg-[#f7eae5]" },
   { href: "/profile", icon: "🎯", title: "Миний зорилго", detail: "Хооллолтын зорилгоо тохируулах", color: "bg-[#eaeafa]" },
@@ -96,8 +96,8 @@ export default async function HomePage({
             <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#203b2d]">Орцоо бичээд, тохирох хоолоо олоорой</h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#5d6c60]">Өндөг, төмс, лууван, тахиа... Хэрэглэхэд хялбар орцын тохирлын систем аль хэдийн ажиллаж байна.</p>
           </div>
-          <Link href="/suggest" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#24563b] px-6 text-sm font-bold text-white hover:bg-[#173f30]">
-            Орц сонгох →
+          <Link href="/pantry" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#24563b] px-6 text-sm font-bold text-white hover:bg-[#173f30]">
+            Хөргөгчөө нээх →
           </Link>
         </div>
       </section>
