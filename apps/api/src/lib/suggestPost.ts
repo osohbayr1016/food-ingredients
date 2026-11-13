@@ -45,6 +45,11 @@ export async function runSuggestQuery(
       enrichPreviewWithPantryQty(ings, basePreview, pantry);
     const totalIngredients = ings.length;
     const pct = totalIngredients ? matchedCnt / totalIngredients : 0;
+    const missing_count = ingredients_preview.filter(p => p.quantity_status === "missing").length;
+    const shortfall_count = ingredients_preview.filter(p => p.quantity_status === "shortfall").length;
+    const unknown_count = ingredients_preview.filter(p => p.quantity_status === "unknown").length;
+    const availability = missing_count > 0 ? "missing_ingredients" :
+      shortfall_count > 0 || unknown_count > 0 ? "check_quantities" : "quantities_match";
     const titleRow = rows.find((r) => r.recipe_id === recipeId)!;
     const m = metaMap.get(recipeId);
     return {
@@ -62,6 +67,10 @@ export async function runSuggestQuery(
       total_ingredients: totalIngredients,
       ingredients_preview,
       pantry_shortfall,
+      missing_count,
+      shortfall_count,
+      unknown_count,
+      availability,
     };
   });
 
