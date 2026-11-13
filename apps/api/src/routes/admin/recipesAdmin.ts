@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { bearerPayload } from "../../lib/authBearer";
+import { READY_TO_PUBLISH_SQL } from "../../lib/dailyApprovedPublish";
 import type { Env } from "../../bindings";
 import { insertRecipe, applyRecipePatch } from "../../lib/applyRecipePatch";
 import { metadataFromRow } from "../../lib/recipeMetadata";
@@ -47,12 +48,7 @@ recipesAdmin.post("/recipes/:id/queue", async (c) => {
   const recipeId = c.req.param("id");
   const eligible = await c.env.DB.prepare(`SELECT r.id FROM recipes r
     JOIN recipe_metadata m ON m.recipe_id=r.id
-    WHERE r.id=? AND r.is_published=0 AND m.review_status='approved'
-      AND trim(COALESCE(m.license_name,'')) <> ''
-      AND (r.prep_time + r.cook_time) > 0
-      AND length(trim(r.description)) >= 15
-      AND (SELECT COUNT(*) FROM ingredients i WHERE i.recipe_id=r.id) >= 2
-      AND (SELECT COUNT(*) FROM steps s WHERE s.recipe_id=r.id) >= 2`)
+    WHERE r.id=? AND ${READY_TO_PUBLISH_SQL}`)
     .bind(recipeId).first();
   if (!eligible) return c.json({error:"editorial_approval_required"},409);
   const jwt = await bearerPayload(c);
