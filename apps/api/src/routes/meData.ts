@@ -9,7 +9,7 @@ meData.get("/me/export",async c=>{
   const jwt=await bearerPayload(c);
   if(!jwt) return c.json({error:"unauthorized"},401);
   try{
-    const [account,nutrition,saved,liked,history,pantry]=await Promise.all([
+    const [account,nutrition,saved,liked,history,pantry,reviewEvents,publicationEntries]=await Promise.all([
       c.env.DB.prepare("SELECT id,username,role,created_at FROM users WHERE id=?").bind(jwt.sub).first(),
       c.env.DB.prepare("SELECT sex,age_years,height_cm,weight_kg,activity_level,goal,updated_at FROM user_nutrition_profiles WHERE user_id=?").bind(jwt.sub).first(),
       c.env.DB.prepare("SELECT recipe_id,saved_at FROM saved_recipes WHERE user_id=? ORDER BY saved_at DESC").bind(jwt.sub).all(),
@@ -17,6 +17,8 @@ meData.get("/me/export",async c=>{
       c.env.DB.prepare("SELECT recipe_id,cooked_at,rating,personal_note FROM cook_history WHERE user_id=? ORDER BY cooked_at DESC").bind(jwt.sub).all(),
       c.env.DB.prepare("SELECT items_json,revision,updated_at FROM user_pantry_snapshots WHERE user_id=?").bind(jwt.sub)
         .first<{items_json:string;revision:number;updated_at:string}>(),
+      c.env.DB.prepare("SELECT id,recipe_id,action,created_at FROM recipe_review_events WHERE actor_id=?").bind(jwt.sub).all(),
+      c.env.DB.prepare("SELECT recipe_id,status,queued_at,published_at FROM recipe_publication_queue WHERE queued_by=?").bind(jwt.sub).all(),
     ]);
     if(!account) return c.json({error:"unauthorized"},401);
     c.header("Cache-Control","no-store");
@@ -28,6 +30,8 @@ meData.get("/me/export",async c=>{
       saved_recipes:saved.results??[],
       liked_recipes:liked.results??[],
       cooking_history:history.results??[],
+      review_events:reviewEvents.results??[],
+      editorial_queue_entries:publicationEntries.results??[],
       pantry:pantry?{
         items:JSON.parse(pantry.items_json) as unknown,
         revision:pantry.revision,
@@ -73,8 +77,13 @@ meData.delete("/me/account",async c=>{
     if(!(await verifyPassword(body.password,account.password_hash)))
       return c.json({error:"invalid_password"},401);
     // FK ON DELETE CASCADE removes saved, history, likes, nutrition, pantry.
-    const deleted=await c.env.DB.prepare("DELETE FROM users WHERE id=?").bind(jwt.sub).run();
-    if(!deleted.meta.changes) return c.json({error:"account_changed"},409);
+    // Retain recipe editorial audit history without storing a deleted account ID.
+    const results=await c.env.DB.batch([
+      c.env.DB.prepare("UPDATE recipe_review_events SET actor_id='deleted-account' WHERE actor_id=?").bind(jwt.sub),
+      c.env.DB.prepare("UPDATE recipe_publication_queue SET queued_by='deleted-account' WHERE queued_by=?").bind(jwt.sub),
+      c.env.DB.prepare("DELETE FROM users WHERE id=?").bind(jwt.sub),
+    ]);
+    if(!results[2]?.meta.changes) return c.json({error:"account_changed"},409);
     c.header("Cache-Control","no-store");
     return c.json({ok:true});
   }catch(error){
