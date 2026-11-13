@@ -48,3 +48,20 @@ test("shopping list flags stock with unknown quantity rather than implying it is
   assert.equal(list[0].quantity,200);
   assert.equal(list[0].stockUncertain,true);
 });
+
+test("compatible ingredient units merge before stock subtraction", () => {
+  const list=aggregateMealShopping([
+    {baseServes:1,plannedServes:1,ingredients:[{ingredient_canonical_id:"rice",name:"Будаа",quantity:1,unit:"кг"}]},
+    {baseServes:1,plannedServes:1,ingredients:[{ingredient_canonical_id:"rice",name:"Будаа",quantity:200,unit:"г"}]},
+  ],[{canonical_id:"rice",name:"Будаа",quantity:"500",unit:"г"}]);
+  assert.equal(list.length,1);
+  assert.equal(list[0].quantity,0.7);
+  assert.equal(list[0].unit,"кг");
+});
+test("same ingredient in mass and volume stays separate, never assumes density", () => {
+  const list=aggregateMealShopping([{baseServes:1,plannedServes:1,ingredients:[
+    {ingredient_canonical_id:"milk",name:"Milk",quantity:200,unit:"мл"},
+    {ingredient_canonical_id:"milk",name:"Milk",quantity:200,unit:"г"},
+  ]}],[]);
+  assert.equal(list.length,2);
+});
