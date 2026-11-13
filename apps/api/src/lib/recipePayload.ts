@@ -42,6 +42,9 @@ export type RecipeMetadata = {
   allergen_status?: "unknown" | "ingredients_reviewed";
   allergens?: string[];
   nutrition_source?: string | null;
+  allergen_evidence_url?: string | null;
+  nutrition_evidence_url?: string | null;
+  review_notes?: string | null;
   calories_kcal?: number | null;
   protein_g?: number | null;
   carbs_g?: number | null;
