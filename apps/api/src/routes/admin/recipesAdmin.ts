@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../../bindings";
 import { insertRecipe, applyRecipePatch } from "../../lib/applyRecipePatch";
 import type { RecipePatchPayload } from "../../lib/recipePayload";
+import { validateRecipePatch } from "../../lib/recipeValidation";
 
 export const recipesAdmin = new Hono<{ Bindings: Env }>();
 
@@ -11,12 +12,6 @@ recipesAdmin.get("/recipes", async (c) => {
   ).all();
   return c.json({ recipes: results ?? [] });
 });
-
-function badPatch(b: RecipePatchPayload | null) {
-  if (!b || typeof b.recipe !== "object") return true;
-  if (!Array.isArray(b.ingredients) || !Array.isArray(b.steps)) return true;
-  return false;
-}
 
 recipesAdmin.get("/recipes/:id", async (c) => {
   const id = c.req.param("id");
@@ -49,7 +44,8 @@ recipesAdmin.get("/recipes/:id", async (c) => {
 
 recipesAdmin.post("/recipes", async (c) => {
   const patch = await c.req.json().catch(() => null) as RecipePatchPayload | null;
-  if (badPatch(patch) || !patch) return c.json({ error: "bad_body" }, 400);
+  const errors = validateRecipePatch(patch);
+  if (errors.length) return c.json({ error: "invalid_recipe", details: errors }, 400);
   const id = crypto.randomUUID();
   await insertRecipe(c.env.DB, id, patch);
   return c.json({ id });
@@ -58,7 +54,8 @@ recipesAdmin.post("/recipes", async (c) => {
 recipesAdmin.patch("/recipes/:id", async (c) => {
   const id = c.req.param("id");
   const patch = await c.req.json().catch(() => null) as RecipePatchPayload | null;
-  if (badPatch(patch) || !patch) return c.json({ error: "bad_body" }, 400);
+  const errors = validateRecipePatch(patch);
+  if (errors.length) return c.json({ error: "invalid_recipe", details: errors }, 400);
   await applyRecipePatch(c.env.DB, id, patch);
   return c.json({ ok: true });
 });

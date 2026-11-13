@@ -46,7 +46,7 @@ function recipeFilterWhere(filters: SuggestFilters): {
   const whereParts = ["r.is_published = 1"];
   const whereBinds: (string | number)[] = [];
   if (filters.max_total_minutes != null) {
-    whereParts.push("(r.prep_time + r.cook_time) <= ?");
+    whereParts.push("(r.prep_time + r.cook_time) > 0 AND (r.prep_time + r.cook_time) <= ?");
     whereBinds.push(filters.max_total_minutes);
   }
   if (filters.max_difficulty != null) {
@@ -92,9 +92,11 @@ export async function scoreMatchingRecipes(
      FROM recipes r JOIN ingredients i ON i.recipe_id = r.id
      WHERE ${whereSql} GROUP BY r.id`;
 
-  const bindsScore: (string | number)[] = [...whereBinds];
+  // SELECT placeholders are evaluated before WHERE placeholders.
+  const bindsScore: (string | number)[] = [];
   if (canonIds.length) bindsScore.push(...canonIds);
   if (names.length) bindsScore.push(...names);
+  bindsScore.push(...whereBinds);
 
   const agg = await db.prepare(scoreSql).bind(...bindsScore).all<ScoreRow>();
   const scored = (agg.results ?? [])
