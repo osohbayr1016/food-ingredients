@@ -64,8 +64,11 @@ export function aggregateMealShopping(recipes: ShoppingRecipe[], pantry: Shoppin
         quantity: qty, stockUncertain: false});
     }
   }
-  const stock = pantry.map(item => ({ ...item, quantityLeft: Number(item.quantity) }))
-    .filter(item => Number.isFinite(item.quantityLeft) && item.quantityLeft > 0);
+  const stock = pantry.map(item => {
+    const raw = item.quantity.trim();
+    const parsed = raw ? Number(raw) : NaN;
+    return { ...item, quantityLeft: Number.isFinite(parsed) && parsed > 0 ? parsed : null };
+  });
   const out: ShoppingLine[] = [];
   for (const line of grouped.values()) {
     let remaining = line.quantity;
@@ -74,7 +77,9 @@ export function aggregateMealShopping(recipes: ShoppingRecipe[], pantry: Shoppin
       const same = line.canonicalId
         ? pantryItem.canonical_id === line.canonicalId
         : norm(pantryItem.name) === norm(line.name);
-      if (!same || pantryItem.quantityLeft <= 0) continue;
+      if (!same) continue;
+      if (pantryItem.quantityLeft === null) { stockUncertain = true; continue; }
+      if (pantryItem.quantityLeft <= 0) continue;
       const converted = convertQuantity(pantryItem.quantityLeft, pantryItem.unit, line.unit);
       if (converted === null) { stockUncertain = true; continue; }
       const used = Math.min(remaining, converted);
