@@ -58,7 +58,7 @@ recipesAdmin.patch("/recipes/:id", async (c) => {
   const id = c.req.param("id");
   const patch = await c.req.json().catch(() => null) as RecipePatchPayload | null;
   const errors = validateRecipePatch(patch);
-  if (errors.length) return c.json({ error: "invalid_recipe", details: errors }, 400);
+  if (!patch || errors.length) return c.json({ error: "invalid_recipe", details: errors }, 400);
   await applyRecipePatch(c.env.DB, id, patch);
   return c.json({ ok: true });
 });
