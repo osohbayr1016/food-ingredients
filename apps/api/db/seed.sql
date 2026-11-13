@@ -61,11 +61,7 @@ INSERT INTO recipes (
   '/recipe-images/chicken-udon-pan.png',
   'Эрүүл, амттай, 20 минутад бэлэн болох өндөр уургийн хоол',
 
-'💪 Калори: ~550 ккал | Уураг: ~42г | Нүүрс ус: ~55г
-
-✅ Соёо соус давслаг тул нэмэлт давс хэрэггүй!
-✅ Кимчи пробиотик тул гэдэсний эрүүл мэндэнд сайн
-✅ Удон нооделсийг хэт чанавал зөөлөрдөг тул болгоомжтой',
+'Соёо соус давслаг тул амталж үзээд давсаа тохируулаарай. Удон нооделсийг хэт чанавал зөөлөрнө. Илчлэг, шим тэжээлийн тооцоог тусад нь баталгаажуулна.',
 
   1,
   1
@@ -101,9 +97,5 @@ INSERT INTO steps (id, recipe_id, step_order, description, description_template,
 ('sku-09','rec-korean-chicken-udon',9,'Sweet Corn нэмэх: Галыг унтрааж Sweet Corn нэмэх. Хольж тавган руу шилжүүлнэ.',NULL,NULL,NULL),
 ('sku-10','rec-korean-chicken-udon',10,'Кимчитэй хамт хүргэх: Тавган дээр хийж, хажууд 0.5 аяга Кимчи (хажуугийн) тавина. Халуун байхад идэнэ! 🍜',NULL,NULL,NULL);
 
-INSERT INTO users (id, username, password_hash, role) VALUES (
-  '00000000-0000-4000-8000-000000000001',
-  'admin',
-  '100000$7318d2aa3de1db72c415b354fa64f5c5$5ef3faa9a70fe7950642d217f7ead912169e0acaaa3410394a14da15ef846045',
-  'admin'
-);
+-- Static admin passwords must never ship as development fixtures.
+-- Configure ADMIN_SECRET in the Worker environment to use the admin API.

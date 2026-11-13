@@ -1,12 +1,13 @@
 "use client";
 
 import { clientFetch } from "@/lib/clientApi";
+import { getRecipeLibraryIds, updateRecipeLibraryId } from "@/lib/recipeLibraryCache";
 import { dispatchLibrary } from "@/lib/profileStorage";
 import { useAuth } from "@/components/auth/AuthContext";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const primary = "#E23E3E";
+const primary = "#276440";
 
 function BookmarkIcon({ filled }: { filled: boolean }) {
   return (
@@ -34,27 +35,32 @@ export function RecipeSaveHeart({
   const { user, ready } = useAuth();
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const refresh = () => {
       if (!user) {
-        if (!cancelled) setSaved(false);
+        setSaved(false);
+        setLoading(false);
         return;
       }
-      const res = await clientFetch("/saved");
-      const payload = (await res.json()) as { saved?: { id: string }[] };
-      const list = payload.saved ?? [];
-      if (!cancelled) {
-        setSaved(
-          Array.isArray(list) && list.some((r: { id: string }) => r.id === recipeId),
-        );
-      }
-    })();
+      void getRecipeLibraryIds(user.id, "saved")
+        .then(ids => {
+          if (!cancelled) { setSaved(ids.has(recipeId)); setFailed(false); }
+        })
+        .catch(() => { if (!cancelled) setFailed(true); })
+        .finally(() => { if (!cancelled) setLoading(false); });
+    };
+    setLoading(true);
+    refresh();
+    window.addEventListener("food-library-changed", refresh);
     return () => {
       cancelled = true;
+      window.removeEventListener("food-library-changed", refresh);
     };
-  }, [recipeId, user]);
+  }, [recipeId, user?.id]);
 
   async function toggle(e?: React.MouseEvent) {
     e?.stopPropagation();
@@ -69,18 +75,27 @@ export function RecipeSaveHeart({
     }
     setBusy(true);
     try {
-      if (saved) {
-        await clientFetch(`/saved/${recipeId}`, { method: "DELETE" });
-        setSaved(false);
-      } else {
-        await clientFetch("/saved", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ recipe_id: recipeId }),
-        });
-        setSaved(true);
+      if (failed) {
+        const ids = await getRecipeLibraryIds(user.id, "saved");
+        setSaved(ids.has(recipeId));
+        setFailed(false);
+        return; // retry the read first; do not toggle an unknown server state
       }
+      const next = !saved;
+      const res = saved
+        ? await clientFetch(`/saved/${recipeId}`, { method: "DELETE" })
+        : await clientFetch("/saved", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recipe_id: recipeId }),
+          });
+      if (!res.ok) throw new Error("save_failed");
+      updateRecipeLibraryId(user.id, "saved", recipeId, next);
+      setSaved(next);
+      setFailed(false);
       dispatchLibrary();
+    } catch {
+      setFailed(true);
     } finally {
       setBusy(false);
     }
@@ -102,11 +117,11 @@ export function RecipeSaveHeart({
   return (
     <button
       type="button"
-      disabled={busy}
+      disabled={busy || loading}
       onClick={toggle}
       className={className}
       style={style}
-      aria-label={saved ? "Remove from saved" : "Save recipe"}
+      aria-label={failed ? "Хадгалах үед алдаа гарсан. Дахин оролдох" : saved ? "Хадгалснаас хасах" : "Жор хадгалах"}
     >
       <BookmarkIcon filled={saved} />
     </button>

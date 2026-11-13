@@ -4,9 +4,7 @@ import { SuggestPantryScanActions } from "@/components/suggest/SuggestPantryScan
 import { SuggestPantryScanHitRows } from "@/components/suggest/SuggestPantryScanHitRows";
 import { useExternalPantryScanTrigger } from "@/components/suggest/useExternalPantryScanTrigger";
 import { usePantryImageScan } from "@/components/suggest/usePantryImageScan";
-import { useCallback, useEffect, useId, useState } from "react";
-
-const AUTO_SCORE = 0.02;
+import { useCallback, useId, useState } from "react";
 
 export function SuggestPantryScanPanel({
   existingIds,
@@ -47,17 +45,6 @@ export function SuggestPantryScanPanel({
     [runFabOrInlineScan],
   );
 
-  useEffect(() => {
-    if (!hits.length) return;
-    const s = new Set<string>();
-    for (const h of hits) {
-      if (h.score >= AUTO_SCORE && !existingIds.has(h.canonical_id)) {
-        s.add(h.canonical_id);
-      }
-    }
-    setSelected(s);
-  }, [hits, existingIds]);
-
   const toggle = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -96,7 +83,7 @@ export function SuggestPantryScanPanel({
             Зурагнаас унших
           </p>
           <p className="text-sm text-zinc-600">
-            CLIP зөвхөн орцын төрөл таамаглана; ширхэгийн тоо одоо ≈1 (илүү нарийвчилгаа — object detection).
+            Зурагнаас орцын нэрийг таамаглана. Хэмжээ, тоог танихгүй — заавал өөрөө шалгаж сонгоорой.
           </p>
         </div>
         <span className="text-zinc-400">{expanded ? "−" : "+"}</span>
@@ -130,7 +117,7 @@ export function SuggestPantryScanPanel({
           {hits.length > 0 && status !== "scanning" ? (
             <>
               <p className="text-xs text-zinc-500">
-                Softmax каталог дээр. Доор сонгоно уу.
+                Доорх саналуудаас зурагт үнэхээр байгаа орцыг өөрөө тэмдэглээрэй. Сонголт автоматаар хийгдэхгүй.
               </p>
               <SuggestPantryScanHitRows
                 hits={hits}

@@ -6,11 +6,9 @@ import type { RecipeListItem } from "@/lib/types";
 import { Suspense } from "react";
 
 const journeys = [
-  { href: "/pantry", icon: "🥕", title: "Миний хөргөгч", detail: "Орцоо хадгалаад жор олох", color: "bg-[#eef4e7]" },
-  { href: "/?max_cook_time=30", icon: "⏱", title: "Хурдан хоол", detail: "30 минут болон түүнээс бага", color: "bg-[#fff3df]" },
-  { href: "/discover", icon: "🍲", title: "Шинэ жор", detail: "Дэлхийн хоолны санаанууд", color: "bg-[#f7eae5]" },
-  { href: "/profile", icon: "🎯", title: "Миний зорилго", detail: "Хооллолтын зорилгоо тохируулах", color: "bg-[#eaeafa]" },
-  { href: "/plan", icon: "📅", title: "7 хоногийн план", detail: "Хоол болон авах орцын жагсаалт", color: "bg-[#e7f4ef]" },
+  { href: "/pantry", icon: "🥕", title: "Байгаа орцоороо", detail: "Хөргөгчиндөө байгаа орцоор хоол олох", color: "bg-[#eef4e7]" },
+  { href: "/?max_cook_time=30#recipe-list-heading", icon: "⏱", title: "Хурдан хоол", detail: "30 минут хүртэлх жорууд", color: "bg-[#fff3df]" },
+  { href: "/discover", icon: "🍲", title: "Бүх жор", detail: "Өдөр бүр шинэ санаа хайх", color: "bg-[#f7eae5]" },
 ];
 
 function getParam(
@@ -38,7 +36,7 @@ export default async function HomePage({
   const { recipes, pagination } = await serverGetJson<{ recipes: RecipeListItem[]; pagination?: { has_more: boolean } }>(
     suffix ? `/recipes?${suffix}` : "/recipes",
   );
-  const filtered = suffix.length > 0;
+  const filtered = ["cuisine", "difficulty", "max_cook_time", "tag", "q", "exclude_allergens", "max_calories", "min_protein"].some(k => query.has(k));
 
   return (
     <main className="space-y-10 pb-12">
@@ -78,14 +76,18 @@ export default async function HomePage({
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#4c7a53]">Танд зориулсан</p>
           <h2 id="start-title" className="mt-1 text-2xl font-bold tracking-tight">Хаанаас эхлэх вэ?</h2>
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {journeys.map((item) => (
-            <Link key={item.href} href={item.href} className={`group flex min-h-40 flex-col rounded-3xl p-5 transition hover:-translate-y-1 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#40834c] ${item.color}`}>
+            <Link key={item.href} href={item.href} className={`group flex min-h-32 flex-col rounded-3xl p-5 transition hover:-translate-y-1 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#40834c] ${item.color}`}>
               <span className="text-3xl" aria-hidden>{item.icon}</span>
               <span className="mt-5 text-base font-bold text-[#22372b]">{item.title}</span>
               <span className="mt-1 text-xs leading-relaxed text-[#55665a]">{item.detail}</span>
             </Link>
           ))}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-[#276440]">
+          <Link href="/plan" className="hover:underline">7 хоногийн хоолны план →</Link>
+          <Link href="/profile" className="hover:underline">Миний зорилго →</Link>
         </div>
       </section>
 
@@ -112,6 +114,7 @@ export default async function HomePage({
           </div>
           <Link href="/discover" className="text-sm font-semibold text-[#276440] hover:underline">Бүгдийг үзэх →</Link>
         </div>
+        <Suspense fallback={<p className="text-sm text-zinc-500">Шүүлтүүр ачаалж байна…</p>}><RecipeFilters /></Suspense>
         {recipes.length ? (
           <RecipeGrid recipes={recipes} />
         ) : (
@@ -128,10 +131,7 @@ export default async function HomePage({
           {pagination?.has_more && <Link href={`/?${new URLSearchParams({ ...Object.fromEntries(query.entries()), page: String(currentPage + 1) })}`}
             className="rounded-xl bg-[#28613e] px-5 py-3 text-white">Дараагийн →</Link>}
         </nav>
-        <details className="rounded-2xl border border-[#dfe8db] bg-white px-5 py-4">
-          <summary className="cursor-pointer text-sm font-bold text-[#254a34]">Илүү нарийн шүүх</summary>
-          <div className="pt-4"><Suspense fallback={<p>Шүүлтүүр ачаалж байна…</p>}><RecipeFilters /></Suspense></div>
-        </details>
+
       </section>
       <footer className="rounded-2xl bg-[#f5f6f2] p-5 text-xs leading-relaxed text-zinc-600">
         Хоолны харшил, илчлэг, шим тэжээлийн мэдээллийг баталгаажаагүй жортой холбоотойгоор аюулгүй гэж үзэж болохгүй. Хүнд хэлбэрийн харшилтай бол орц, савлагаа болон бохирдлын эрсдэлийг өөрөө шалгана уу.

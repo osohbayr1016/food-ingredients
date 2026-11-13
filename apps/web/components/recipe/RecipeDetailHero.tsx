@@ -58,7 +58,7 @@ export function RecipeDetailHero({ data }: { data: RecipeDetail }) {
 
   return (
     <section
-      className="relative -mx-4 aspect-5/6 sm:mx-0"
+      className="relative -mx-4 aspect-[4/3] sm:aspect-[16/9] sm:mx-0"
       aria-roledescription="carousel"
     >
       <div className="absolute inset-0 overflow-hidden rounded-b-[28px] bg-zinc-200 sm:rounded-3xl">

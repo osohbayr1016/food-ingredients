@@ -18,6 +18,7 @@ export function useSuggestPantryBatch(
   setRows: (r: SuggestResultRow[]) => void,
   resultsSigRef: MutableRefObject<string | null>,
   setBusy: (b: boolean) => void,
+  setError: (e: string | null) => void,
 ) {
   const addMultiplePicks = useCallback(
     (newRows: { canonical_id: string; name: string }[]) => {
@@ -40,11 +41,15 @@ export function useSuggestPantryBatch(
       resultsSigRef.current = null;
       replaceQuery(next, filters, false);
       setBusy(true);
+      setError(null);
       try {
         const list = await postSuggestPantryResults(next, filters);
         setRows(list);
         resultsSigRef.current = suggestStateSig(next, filters);
         replaceQuery(next, filters, true);
+      } catch {
+        setError("Жор тааруулахад алдаа гарлаа. Дахин оролдоорой.");
+        setRows([]);
       } finally {
         setBusy(false);
       }
@@ -56,6 +61,7 @@ export function useSuggestPantryBatch(
       setRows,
       resultsSigRef,
       setBusy,
+      setError,
     ],
   );
 

@@ -46,18 +46,23 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
         {data.recipe.description}
       </p>
 
-      <RecipeDetailGallery galleryRaw={data.recipe.gallery_r2_keys} />
-      {videoEmbed && (
-        <section className="space-y-3" aria-labelledby="video-guide-title">
-          <h2 id="video-guide-title" className="text-xl font-bold text-[#244934]">Видео заавар</h2>
-          <div className="aspect-video overflow-hidden rounded-2xl bg-zinc-900">
-            <iframe src={videoEmbed} title={`${data.recipe.title} видео заавар`}
-              className="h-full w-full" loading="lazy" referrerPolicy="strict-origin-when-cross-origin"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen />
-          </div>
-        </section>
-      )}
+      <RecipeDetailStatRow
+        prepTime={data.recipe.prep_time}
+        cookTime={data.recipe.cook_time}
+        serves={serves}
+        origin={data.recipe.cuisine}
+      />
+
+      <div className="flex items-center gap-3 text-xs text-zinc-500">
+        {data.recipe.prep_time > 0 && <span>Бэлтгэл {data.recipe.prep_time} мин</span>}
+        {data.recipe.prep_time > 0 && data.recipe.cook_time > 0 && <span aria-hidden>•</span>}
+        {data.recipe.cook_time > 0 && <span>Хийх {data.recipe.cook_time} мин</span>}
+        <DifficultyDots value={data.recipe.difficulty} />
+        <span className="inline-flex items-center gap-1" aria-hidden>
+          {cuisineEmoji(data.recipe.cuisine)}
+        </span>
+      </div>
+
       <section className="space-y-3" aria-label="Хоолны аюулгүй байдал ба шим тэжээл">
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
           <p className="font-bold">Харшлын мэдээлэл</p>
@@ -92,22 +97,16 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
       </section>
 
 
-      <RecipeDetailStatRow
-        prepTime={data.recipe.prep_time}
-        cookTime={data.recipe.cook_time}
-        serves={serves}
-        origin={data.recipe.cuisine}
+      <ServingSlider
+        value={serves}
+        max={Math.max(12, base * 4)}
+        onChange={setServes}
       />
 
-      <div className="flex items-center gap-3 text-xs text-zinc-500">
-        {data.recipe.prep_time > 0 && <span>Бэлтгэл {data.recipe.prep_time} мин</span>}
-        {data.recipe.prep_time > 0 && data.recipe.cook_time > 0 && <span aria-hidden>•</span>}
-        {data.recipe.cook_time > 0 && <span>Хийх {data.recipe.cook_time} мин</span>}
-        <DifficultyDots value={data.recipe.difficulty} />
-        <span className="inline-flex items-center gap-1" aria-hidden>
-          {cuisineEmoji(data.recipe.cuisine)}
-        </span>
-      </div>
+      <section className="space-y-3">
+        <h2 className="text-lg font-bold text-zinc-900">Орц, материал</h2>
+        <IngredientGroupedList items={data.ingredients} ctx={ctx} />
+      </section>
 
       {!!data.tags.length && (
         <div className="flex flex-wrap gap-2 text-xs">
@@ -139,22 +138,11 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
         </div>
       )}
 
-      <ServingSlider
-        value={serves}
-        max={Math.max(12, base * 4)}
-        onChange={setServes}
-      />
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-bold text-zinc-900">Орц, материал</h2>
-        <IngredientGroupedList items={data.ingredients} ctx={ctx} />
-      </section>
-
       <section className="space-y-3" id="making-guide">
         <div>
           <h2 className="text-lg font-bold text-zinc-900">Хийх заавар</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Making guide — алхмаар нь дагана уу. Доорх товчоор бүтэн тогооны горимд орно.
+            Алхмуудыг уншаад, доорх товчоор хоол хийх горимыг нээнэ үү.
           </p>
         </div>
         {data.steps.length === 0 ? (
@@ -176,13 +164,23 @@ export function RecipeDetailView({ data }: { data: RecipeDetail }) {
         )}
       </section>
 
+      <RecipeDetailGallery galleryRaw={data.recipe.gallery_r2_keys} />
+      {videoEmbed && (
+        <section className="space-y-3" aria-labelledby="video-guide-title">
+          <h2 id="video-guide-title" className="text-xl font-bold text-[#244934]">Видео заавар</h2>
+          <div className="aspect-video overflow-hidden rounded-2xl bg-zinc-900">
+            <iframe src={videoEmbed} title={`${data.recipe.title} видео заавар`}
+              className="h-full w-full" loading="lazy" referrerPolicy="strict-origin-when-cross-origin"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen />
+          </div>
+        </section>
+      )}
+
       {data.steps.length > 0 && <Link
         href={`/recipe/${data.recipe.id}/cook?serves=${serves}`}
-        className="fixed left-1/2 z-30 inline-flex min-w-[220px] -translate-x-1/2 justify-center rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg shadow-[#276440]/20 touch-manipulation md:bottom-6"
-        style={{
-          bottom: "calc(88px + env(safe-area-inset-bottom))",
-          backgroundColor: "var(--figma-primary)",
-        }}
+        className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-30 inline-flex min-w-[220px] -translate-x-1/2 justify-center rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg shadow-[#276440]/20 touch-manipulation lg:bottom-6"
+        style={{ backgroundColor: "var(--figma-primary)" }}
       >
         Алхмаар хоол хийх
       </Link>}

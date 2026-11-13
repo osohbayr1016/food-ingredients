@@ -28,9 +28,9 @@ export function SuggestPantryScanHitRows({
             <span className={existingIds.has(h.canonical_id) ? "text-zinc-400" : ""}>
               {h.name}{" "}
               <span className="tabular-nums text-zinc-400">
-                {(h.score * 100).toFixed(1)}%
+                оноо: {h.score.toFixed(3)}
               </span>
-              <span className="ml-1 text-xs text-zinc-400">(≈1)</span>
+              <span className="ml-1 text-xs text-zinc-400">(тоо тодорхойгүй)</span>
               {existingIds.has(h.canonical_id) ? " — аль хэдийн" : ""}
             </span>
           </label>
