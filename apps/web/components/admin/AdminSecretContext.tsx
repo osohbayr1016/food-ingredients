@@ -19,9 +19,7 @@ const AdminSecretContext = createContext<AdminSecretCtx | null>(null);
 
 export function AdminSecretProvider({ children }: { children: ReactNode }) {
   const { user, token } = useAuth();
-  const [manualSecret, setManualSecret] = useState(() =>
-    process.env.NODE_ENV === "development" ? "admin" : "",
-  );
+  const [manualSecret, setManualSecret] = useState("");
   const t = token.trim();
   const adminSecret =
     user?.role === "admin" && t ? t : manualSecret;
