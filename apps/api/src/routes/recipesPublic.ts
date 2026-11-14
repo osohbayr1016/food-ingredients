@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { ALLERGEN_CODES, metadataFromRow } from "../lib/recipeMetadata";
 import { recipeFtsMatch } from "../lib/recipeSearch";
+import { parseRecipeListFilters } from "../lib/recipeListFilters";
 
 export const recipes = new Hono<{ Bindings: Env }>();
 
@@ -17,8 +18,10 @@ recipes.get("/recipes", async (c) => {
       !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100) {
     return c.json({ error: "invalid_pagination" }, 400);
   }
+  const parsedFilters = parseRecipeListFilters(difficulty, maxCook);
+  if ("error" in parsedFilters) return c.json({ error: parsedFilters.error }, 400);
   const excludedRaw = c.req.query("exclude_allergens")?.trim();
-  const excluded = excludedRaw ? [...new Set(excludedRaw.split(",").filter(Boolean))] : [];
+  const excluded = excludedRaw ? [...new Set(excludedRaw.split(",").map(code => code.trim()).filter(Boolean))] : [];
   if (excluded.some(code => !ALLERGEN_CODES.includes(code as typeof ALLERGEN_CODES[number]))) return c.json({ error: "invalid_allergen" }, 400);
   const maxKcalRaw = c.req.query("max_calories");
   const minProteinRaw = c.req.query("min_protein");
@@ -29,17 +32,14 @@ recipes.get("/recipes", async (c) => {
     where.push("r.cuisine = ?");
     params.push(cuisine);
   }
-  if (difficulty) {
+  if (parsedFilters.filters.difficulty !== null) {
     where.push("r.difficulty = ?");
-    params.push(Number(difficulty));
+    params.push(parsedFilters.filters.difficulty);
   }
-  if (maxCook) {
-    const maxMinutes = Number(maxCook);
-    if (Number.isSafeInteger(maxMinutes) && maxMinutes > 0 && maxMinutes <= 1440) {
-      // Zero-valued imported times mean unknown, not "instant".
-      where.push("(r.prep_time + r.cook_time) > 0 AND (r.prep_time + r.cook_time) <= ?");
-      params.push(maxMinutes);
-    }
+  if (parsedFilters.filters.maxTotalMinutes !== null) {
+    // Zero-valued imported times mean unknown, not "instant".
+    where.push("(r.prep_time + r.cook_time) > 0 AND (r.prep_time + r.cook_time) <= ?");
+    params.push(parsedFilters.filters.maxTotalMinutes);
   }
   // Allergens: only ingredient-reviewed recipes qualify, never unreviewed recipes.
   if (excluded.length) {
