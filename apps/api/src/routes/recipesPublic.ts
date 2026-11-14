@@ -4,15 +4,18 @@ import { ALLERGEN_CODES, metadataFromRow } from "../lib/recipeMetadata";
 import { recipeFtsMatch } from "../lib/recipeSearch";
 import { parseRecipeListFilters } from "../lib/recipeListFilters";
 import { parseRecipeSort, recipeSortSql } from "../lib/recipeSort";
+import { parseRecipeDiscoveryParams } from "../lib/recipeDiscoveryQuery";
 
 export const recipes = new Hono<{ Bindings: Env }>();
 
 recipes.get("/recipes", async (c) => {
-  const cuisine = c.req.query("cuisine");
+  const parsedSearch = parseRecipeDiscoveryParams({
+    cuisine:c.req.query("cuisine"),tag:c.req.query("tag"),q:c.req.query("q"),
+  });
+  if (!parsedSearch.ok) return c.json({error:parsedSearch.error},400);
+  const {cuisine,tag,query} = parsedSearch.value;
   const difficulty = c.req.query("difficulty");
   const maxCook = c.req.query("max_cook_time");
-  const tag = c.req.query("tag");
-  const query = c.req.query("q")?.trim().toLowerCase().slice(0, 100);
   const page = Number(c.req.query("page") || 1);
   const pageSize = Number(c.req.query("page_size") || 36);
   if (!Number.isSafeInteger(page) || page < 1 || page > 1000 ||
