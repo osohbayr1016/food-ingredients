@@ -3,6 +3,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Hono } from "hono";
 import type { Env } from "../../bindings";
 import { safeRecipeUploadScope } from "../../lib/uploadKeyScope";
+import { parsePresignImageRequest } from "../../lib/presignedImagePolicy";
 
 export const uploadAdmin = new Hono<{ Bindings: Env }>();
 
@@ -12,6 +13,10 @@ function trimEnv(v: string | undefined): string {
 
 uploadAdmin.post("/upload/presign", async (c) => {
   const env = c.env;
+  // The browser uses the binding route with validated bytes; presigned direct
+  // R2 uploads are an explicitly enabled legacy escape hatch only.
+  if (env.R2_PRESIGN_ENABLED !== "true")
+    return c.json({error:"presign_disabled",message:"Use /admin/upload/image instead."},501);
   const acc = trimEnv(env.R2_ACCOUNT_ID);
   const keyId = trimEnv(env.R2_ACCESS_KEY_ID);
   const secret = trimEnv(env.R2_SECRET_ACCESS_KEY);
@@ -44,22 +49,12 @@ uploadAdmin.post("/upload/presign", async (c) => {
       501,
     );
 
-  const raw = await c.req.json().catch(() => null) as {
-    content_type?: string;
-    recipe_id?: string;
-    filename_hint?: string;
-  } | null;
-  const body = raw ?? {};
+  const body = await c.req.json().catch(() => null) as Record<string,unknown> | null;
+  const parsed = parsePresignImageRequest(body);
+  if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+  const { contentType, sizeBytes } = parsed;
 
-  const contentType =
-    body?.content_type === "image/webp" ||
-    body?.content_type === "image/jpeg" ||
-    body?.content_type === "image/png"
-      ? body.content_type
-      : null;
-  if (!contentType) return c.json({ error: "unsupported_type" }, 400);
-
-  const recipePart = safeRecipeUploadScope(body.recipe_id);
+  const recipePart = safeRecipeUploadScope(body?.recipe_id);
   if (!recipePart) return c.json({ error: "bad_recipe_id" }, 400);
 
   const ext = contentType.endsWith("webp")
@@ -79,12 +74,16 @@ uploadAdmin.post("/upload/presign", async (c) => {
     Bucket: bucket,
     Key: r2_key,
     ContentType: contentType,
+    ContentLength: sizeBytes,
     CacheControl: "public, max-age=31536000, immutable",
   });
 
   let upload_url: string;
   try {
-    upload_url = await getSignedUrl(client, command, { expiresIn: 300 });
+    upload_url = await getSignedUrl(client, command, {
+      expiresIn: 300,
+      signableHeaders: new Set(["content-length", "content-type"]),
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return c.json(
@@ -97,11 +96,10 @@ uploadAdmin.post("/upload/presign", async (c) => {
       502,
     );
   }
-  void body?.filename_hint;
-
   return c.json({
     upload_url,
     r2_key,
     public_url: `${pub.replace(/\/$/, "")}/${r2_key}`,
+    required_headers: {"Content-Type":contentType,"Content-Length":String(sizeBytes)},
   });
 });
