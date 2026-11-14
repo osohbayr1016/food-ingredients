@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../../bindings";
+import { parseMealDbId, parseMealDbSearchQuery } from "../../lib/editorialInputs";
 import { insertRecipe } from "../../lib/applyRecipePatch";
 import {
   findRecipeByImport,
@@ -14,8 +15,10 @@ import {
 export const themealdbImportAdmin = new Hono<{ Bindings: Env }>();
 
 themealdbImportAdmin.get("/import/themealdb/search", async (c) => {
-  const q = c.req.query("q")?.trim() ?? "";
-  if (!q) return c.json({ meals: [] });
+  const rawQ = c.req.query("q") ?? "";
+  if (!rawQ.trim()) return c.json({ meals: [] });
+  const q = parseMealDbSearchQuery(rawQ);
+  if (!q) return c.json({ error: "invalid_search_query" }, 400);
   try {
     const meals = await searchMeals(q);
     return c.json({
@@ -31,8 +34,8 @@ themealdbImportAdmin.get("/import/themealdb/search", async (c) => {
 });
 
 themealdbImportAdmin.get("/import/themealdb/preview", async (c) => {
-  const id = c.req.query("id")?.trim() ?? "";
-  if (!id) return c.json({ error: "missing_id" }, 400);
+  const id = parseMealDbId(c.req.query("id"));
+  if (!id) return c.json({ error: "invalid_id" }, 400);
   let meal;
   try {
     meal = await lookupMealById(id);
@@ -78,11 +81,11 @@ themealdbImportAdmin.get("/import/themealdb/preview", async (c) => {
 
 themealdbImportAdmin.post("/import/themealdb/commit", async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
-    idMeal?: string;
+    idMeal?: unknown;
     publish?: boolean;
   } | null;
-  const idMeal = body?.idMeal?.trim() ?? "";
-  if (!idMeal) return c.json({ error: "missing_idMeal" }, 400);
+  const idMeal = parseMealDbId(body?.idMeal);
+  if (!idMeal) return c.json({ error: "invalid_idMeal" }, 400);
   if (body?.publish === true) return c.json({ error: "review_before_publishing" }, 400);
 
   let meal;

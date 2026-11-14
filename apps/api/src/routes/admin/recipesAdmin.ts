@@ -200,6 +200,8 @@ recipesAdmin.patch("/recipes/:id", async (c) => {
   } : null;
   const errors = validateRecipePatch(patch);
   if (!patch || errors.length) return c.json({ error: "invalid_recipe", details: errors }, 400);
+  const exists = await c.env.DB.prepare("SELECT id FROM recipes WHERE id=?").bind(id).first();
+  if (!exists) return c.json({ error: "not_found" }, 404);
   await applyRecipePatch(c.env.DB, id, patch);
   return c.json({ ok: true, status: "needs_review" });
 });
