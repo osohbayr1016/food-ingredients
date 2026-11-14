@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { bearerPayload } from "../lib/authBearer";
+import { readBoundedJson } from "../lib/boundedJson";
 import { d1ErrorMessage, isD1NoSuchTableUsers } from "../lib/d1Errors";
 import {
   type NutritionProfileRow,
@@ -67,8 +68,10 @@ meNutrition.get("/me/nutrition", async (c) => {
 meNutrition.put("/me/nutrition", async (c) => {
   const jwt = await bearerPayload(c);
   if (!jwt) return c.json({ error: "unauthorized" }, 401);
-  const body = (await c.req.json().catch(() => null)) as Partial<BodyStatsInput> | null;
-  if (!body) return c.json({ error: "invalid_json" }, 400);
+  const decoded = await readBoundedJson(c.req.raw.body, 8 * 1024);
+  if (!decoded.ok) return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const body = decoded.value as Partial<BodyStatsInput> | null;
+  if (!body || typeof body !== "object" || Array.isArray(body)) return c.json({ error: "invalid_json" }, 400);
 
   const sex = body.sex;
   if (sex !== "male" && sex !== "female") return c.json({ error: "invalid_sex" }, 400);

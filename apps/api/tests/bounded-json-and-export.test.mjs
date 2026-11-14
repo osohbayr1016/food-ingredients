@@ -33,3 +33,17 @@ test("account export includes every property of a saved weekly plan",()=>{
     checked:{"milk|ml":true},titles:{r1:"Тахианы шөл"},
   });
 });
+
+test("request-specific API budgets reject oversize JSON streams at the exact byte boundary",async()=>{
+  const bytes=enc.encode(JSON.stringify({value:"x".repeat(4096)}));
+  const atLimit=await readBoundedJson(stream([bytes.subarray(0,100),bytes.subarray(100)]),bytes.byteLength);
+  assert.equal(atLimit.ok,true);
+  const exceeded=await readBoundedJson(stream([bytes.subarray(0,100),bytes.subarray(100)]),bytes.byteLength-1);
+  assert.deepEqual(exceeded,{ok:false,error:"payload_too_large"});
+});
+test("rejects incomplete multibyte JSON rather than repairing the payload silently",async()=>{
+  const bytes=enc.encode('{"title":"Монгол"}');
+  const bad=bytes.slice(0,bytes.length-3);
+  const result=await readBoundedJson(stream([bad]),512);
+  assert.deepEqual(result,{ok:false,error:"invalid_json"});
+});

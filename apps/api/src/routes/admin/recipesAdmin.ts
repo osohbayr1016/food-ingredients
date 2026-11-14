@@ -6,6 +6,7 @@ import { insertRecipe, applyRecipePatch } from "../../lib/applyRecipePatch";
 import { metadataFromRow } from "../../lib/recipeMetadata";
 import type { RecipePatchPayload } from "../../lib/recipePayload";
 import { validateRecipePatch } from "../../lib/recipeValidation";
+import { readBoundedJson } from "../../lib/boundedJson";
 
 export const recipesAdmin = new Hono<{ Bindings: Env }>();
 
@@ -173,7 +174,9 @@ recipesAdmin.get("/recipes/:id", async (c) => {
 });
 
 recipesAdmin.post("/recipes", async (c) => {
-  const incoming = await c.req.json().catch(() => null) as RecipePatchPayload | null;
+  const decoded = await readBoundedJson(c.req.raw.body, 512 * 1024);
+  if (!decoded.ok) return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const incoming = decoded.value as RecipePatchPayload | null;
   const patch = incoming?.recipe ? {
     ...incoming,
     recipe: { ...incoming.recipe, is_published: false },
@@ -190,7 +193,9 @@ recipesAdmin.post("/recipes", async (c) => {
 
 recipesAdmin.patch("/recipes/:id", async (c) => {
   const id = c.req.param("id");
-  const incoming = await c.req.json().catch(() => null) as RecipePatchPayload | null;
+  const decoded = await readBoundedJson(c.req.raw.body, 512 * 1024);
+  if (!decoded.ok) return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const incoming = decoded.value as RecipePatchPayload | null;
   const patch = incoming?.recipe ? {
     ...incoming,
     recipe: { ...incoming.recipe, is_published: false },
