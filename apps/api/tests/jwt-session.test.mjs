@@ -12,3 +12,16 @@ test("old token gets zero version until revoked",async()=>{
   assert.equal((await verifyJwt(jwt,secret))?.ver,0);
   assert.equal(await verifyJwt(jwt.slice(2),secret),null);
 });
+
+test("verification fails closed if the JWT signing secret is missing or short",async()=>{
+  const jwt=await signJwt({sub:"user-1",role:"user"},secret,600);
+  for(const missing of ["","short",undefined,null]){
+    assert.equal(await verifyJwt(jwt,missing),null);
+  }
+});
+test("token signing requires a strong configured key and a bounded expiration",async()=>{
+  await assert.rejects(signJwt({sub:"u",role:"user"},"",600),/jwt_secret_not_configured/);
+  await assert.rejects(signJwt({sub:"u",role:"user"},"short",600),/jwt_secret_not_configured/);
+  await assert.rejects(signJwt({sub:"u",role:"user"},secret,0),/invalid_jwt_ttl/);
+  await assert.rejects(signJwt({sub:"u",role:"user"},secret,32*86400),/invalid_jwt_ttl/);
+});

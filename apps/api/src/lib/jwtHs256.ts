@@ -1,6 +1,11 @@
 const te = new TextEncoder();
 const td = new TextDecoder();
 
+/** Reject missing/placeholder secrets even if this Worker route bypasses readiness. */
+function validJwtSecret(secret: unknown): secret is string {
+  return typeof secret === "string" && secret.trim().length >= 16;
+}
+
 function b64url(buf: Uint8Array): string {
   let s = "";
   for (let i = 0; i < buf.length; i++) s += String.fromCharCode(buf[i]!);
@@ -36,6 +41,10 @@ export async function signJwt(
   secret: string,
   ttlSec: number,
 ): Promise<string> {
+  if (!validJwtSecret(secret)) throw new Error("jwt_secret_not_configured");
+  if (!Number.isSafeInteger(ttlSec) || ttlSec <= 0 || ttlSec > 30 * 86400) {
+    throw new Error("invalid_jwt_ttl");
+  }
   const header = b64url(te.encode(JSON.stringify({ alg: "HS256", typ: "JWT" })));
   const now = Math.floor(Date.now() / 1000);
   const body = b64url(
@@ -57,6 +66,8 @@ export async function verifyJwt(
   token: string,
   secret: string,
 ): Promise<JwtPayload | null> {
+  // Never accept tokens when JWT_SECRET is unconfigured, even outside login.
+  if (!validJwtSecret(secret)) return null;
   // Reject oversized / malformed input before HMAC or base64 processing.
   if(typeof token!=="string" || token.length>4096 || !/^[A-Za-z0-9._-]+$/.test(token))
     return null;
@@ -76,6 +87,7 @@ export async function verifyJwt(
   } catch {
     return null;
   }
+  if (!header || typeof header !== "object" || !json || typeof json !== "object") return null;
   if (
     header.alg !== "HS256" || header.typ !== "JWT" ||
     typeof json.sub !== "string" || !json.sub ||
@@ -85,6 +97,6 @@ export async function verifyJwt(
   ) {
     return null;
   }
-  if (json.exp < Math.floor(Date.now() / 1000)) return null;
+  if (json.exp <= Math.floor(Date.now() / 1000)) return null;
   return { sub: json.sub, role: json.role, ver: json.ver ?? 0 };
 }
