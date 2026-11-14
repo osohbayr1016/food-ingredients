@@ -39,10 +39,10 @@ function structuredRecipe(detail: RecipeDetail) {
   const imageUrl = image ? new URL(image, site).toString() : undefined;
   const nutrition = hasVerifiedNutrition(metadata) ? {
     "@type": "NutritionInformation",
-    calories: metadata.calories_kcal != null ? `${metadata.calories_kcal} calories` : undefined,
-    proteinContent: metadata.protein_g != null ? `${metadata.protein_g} g` : undefined,
-    carbohydrateContent: metadata.carbs_g != null ? `${metadata.carbs_g} g` : undefined,
-    fatContent: metadata.fat_g != null ? `${metadata.fat_g} g` : undefined,
+    calories: metadata?.calories_kcal != null ? `${metadata?.calories_kcal} calories` : undefined,
+    proteinContent: metadata?.protein_g != null ? `${metadata?.protein_g} g` : undefined,
+    carbohydrateContent: metadata?.carbs_g != null ? `${metadata?.carbs_g} g` : undefined,
+    fatContent: metadata?.fat_g != null ? `${metadata?.fat_g} g` : undefined,
   } : undefined;
   return {
     "@context": "https://schema.org",
