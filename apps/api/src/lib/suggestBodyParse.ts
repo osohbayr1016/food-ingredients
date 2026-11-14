@@ -29,18 +29,20 @@ export function parsePantry(body: unknown): PantryLineIn[] {
   for (const x of raw.slice(0, 30)) {
     if (!x || typeof x !== "object") continue;
     const r = x as Record<string, unknown>;
-    const name = String(r.name ?? "").trim();
+    // Do not coerce arbitrary JSON objects: String({toString:null}) can throw.
+    const name = typeof r.name === "string" ? r.name.trim() : "";
     const canonical_id =
       typeof r.canonical_id === "string" && r.canonical_id.trim()
         ? r.canonical_id.trim()
         : undefined;
     if ((!name && !canonical_id) || name.length > 120 || (canonical_id && canonical_id.length > 120)) continue;
     let quantity: number | undefined;
-    if (r.quantity != null && r.quantity !== "") {
+    if ((typeof r.quantity === "string" || typeof r.quantity === "number") &&
+        r.quantity !== "") {
       const n = Number(r.quantity);
       if (Number.isFinite(n) && n > 0 && n <= 100000) quantity = n;
     }
-    const unit = r.unit != null ? String(r.unit).trim().slice(0, 40) : "";
+    const unit = typeof r.unit === "string" ? r.unit.trim().slice(0, 40) : "";
     out.push({
       canonical_id,
       name,
@@ -54,11 +56,12 @@ export function parsePantry(body: unknown): PantryLineIn[] {
 export function parseFilters(body: unknown): SuggestFilters {
   if (!body || typeof body !== "object" || !("filters" in body)) return {};
   const f = (body as { filters?: unknown }).filters;
-  if (!f || typeof f !== "object") return {};
+  if (!f || typeof f !== "object" || Array.isArray(f)) return {};
   const o = f as Record<string, unknown>;
   const pick = (k: string) => {
     const v = o[k];
     if (v == null || v === "") return undefined;
+    if (typeof v !== "string" && typeof v !== "number") return undefined;
     const n = Number(v);
     return Number.isFinite(n) ? n : undefined;
   };
@@ -94,4 +97,33 @@ export function parseSuggestInput(body: unknown): {
   const legacyNames = normNames(body);
   if (!legacyNames.length && !pantry.length) return null;
   return { legacyNames, pantry, filters };
+}
+
+/** Request filter validation: bad inputs should not silently loosen recipe constraints. */
+export function validateSuggestFilters(body: unknown): boolean {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return false;
+  const filters = (body as Record<string, unknown>).filters;
+  if (filters == null) return true;
+  if (typeof filters !== "object" || Array.isArray(filters)) return false;
+  const data = filters as Record<string, unknown>;
+  const specs = [
+    ["max_total_minutes", 1, 1440, false],
+    ["max_difficulty", 1, 3, true],
+    ["min_serves", 1, 100, true],
+    ["max_serves", 1, 100, true],
+  ] as const;
+  const numbers = new Map<string, number>();
+  for (const [key, min, max, integerOnly] of specs) {
+    const raw = data[key];
+    if (raw == null || raw === "") continue;
+    if (typeof raw !== "string" && typeof raw !== "number") return false;
+    if (typeof raw === "string" && !/^\d+(?:\.\d+)?$/.test(raw.trim())) return false;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < min || n > max ||
+        (integerOnly && !Number.isSafeInteger(n))) return false;
+    numbers.set(key,n);
+  }
+  const minServes = numbers.get("min_serves");
+  const maxServes = numbers.get("max_serves");
+  return minServes === undefined || maxServes === undefined || minServes <= maxServes;
 }
