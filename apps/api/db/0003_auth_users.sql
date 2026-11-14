@@ -49,9 +49,7 @@ DROP TABLE IF EXISTS cook_history;
 ALTER TABLE cook_history_new RENAME TO cook_history;
 CREATE INDEX IF NOT EXISTS ix_history_user ON cook_history(user_id);
 
-INSERT OR IGNORE INTO users (id, username, password_hash, role) VALUES (
-  '00000000-0000-4000-8000-000000000001',
-  'admin',
-  '100000$7318d2aa3de1db72c415b354fa64f5c5$5ef3faa9a70fe7950642d217f7ead912169e0acaaa3410394a14da15ef846045',
-  'admin'
-);
+-- Never provision a fixed admin password hash as part of a shared SQL migration.
+-- Admin access is configured by ADMIN_SECRET (Worker environment); if an admin
+-- account is needed, create it explicitly with a unique generated password hash.
+-- Existing installs must separately audit/rotate any historically seeded account.
