@@ -99,7 +99,9 @@ test("pantry matcher binds ingredient parameters before filter parameters", asyn
     return { bind(...args) {
       preparedBinds = args;
       return { all: async () => ({ results: [
-        {recipe_id:"r1",title:"Rice with egg",matched_rows:1,total_rows:2},
+        {recipe_id:"r2",title:"Rice with egg",matched_rows:1,total_rows:2},
+        {recipe_id:"r1",title:"Egg fried rice",matched_rows:1,total_rows:2},
+        {recipe_id:"r3",title:"Rice-only snack",matched_rows:1,total_rows:4},
       ] }) };
     } };
   } };
@@ -108,7 +110,8 @@ test("pantry matcher binds ingredient parameters before filter parameters", asyn
   );
   assert.deepEqual(preparedBinds, ["canonical-egg", "egg", 30, 2]);
   assert.match(preparedSql, /prep_time \+ r\.cook_time\) > 0/);
-  assert.equal(res.length, 1);
+  assert.deepEqual(res.map(x=>x.recipe_id),["r1","r2","r3"]);
+  assert.match(preparedSql,/matched_rows DESC, r\.id ASC/);
 });
 
 test("allergy safety and nutrition need documented evidence links", () => {

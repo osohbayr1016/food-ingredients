@@ -92,7 +92,8 @@ export async function scoreMatchingRecipes(
      FROM recipes r JOIN ingredients i ON i.recipe_id = r.id
      WHERE ${whereSql} GROUP BY r.id
      HAVING matched_rows > 0
-     ORDER BY (CAST(matched_rows AS REAL) / NULLIF(total_rows,0)) DESC, matched_rows DESC
+     ORDER BY (CAST(matched_rows AS REAL) / NULLIF(total_rows,0)) DESC,
+       matched_rows DESC, r.id ASC
      LIMIT 120`;
 
   // SELECT placeholders are evaluated before WHERE placeholders.
@@ -107,8 +108,10 @@ export async function scoreMatchingRecipes(
       const pct = row.total_rows ? row.matched_rows / row.total_rows : 0;
       return { ...row, pct };
     })
-    .filter((r) => r.pct >= 0.5 || r.matched_rows > 0)
-    .sort((a, b) => b.pct - a.pct || b.matched_rows - a.matched_rows)
+    // HAVING already excludes nonmatches. Stable tie-breaking prevents the
+    // same-pantry results from jumping between requests.
+    .sort((a, b) => b.pct - a.pct || b.matched_rows - a.matched_rows ||
+      (a.recipe_id < b.recipe_id ? -1 : a.recipe_id > b.recipe_id ? 1 : 0))
     .slice(0, 120);
   return scored.map(({ pct: _p, ...row }) => row);
 }
