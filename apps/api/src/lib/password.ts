@@ -15,14 +15,16 @@ export async function verifyPassword(
   password: string,
   stored: string,
 ): Promise<boolean> {
+  if (typeof stored !== "string" || stored.length > 256) return false;
   const parts = stored.split("$");
   if (parts.length !== 3) return false;
   const iter = Number(parts[0]);
+  // Reject malformed or computationally unbounded stored hashes before PBKDF2.
+  if (!Number.isSafeInteger(iter) || iter < 10000 || iter > 1000000 ||
+      !/^[0-9a-f]{16,128}$/i.test(parts[1]) || parts[1].length % 2 !== 0 ||
+      !/^[0-9a-f]{64}$/i.test(parts[2])) return false;
   const salt = hexToBuf(parts[1]);
   const want = hexToBuf(parts[2]);
-  if (!Number.isFinite(iter) || iter < 10000 || salt.length < 8 || want.length < 16) {
-    return false;
-  }
   const key = await deriveKey(password, salt, iter);
   if (key.length !== want.length) return false;
   let ok = 0;
