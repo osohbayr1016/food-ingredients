@@ -33,7 +33,7 @@ export async function readBoundedJson(
   let pos=0;
   for (const p of parts) {bytes.set(p,pos);pos+=p.byteLength;}
   try {
-    return {ok:true,value:JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)) as unknown};
+    return {ok:true,value:JSON.parse(new TextDecoder("utf-8",{fatal:true,ignoreBOM:false}).decode(bytes)) as unknown};
   } catch {
     return {ok:false,error:"invalid_json"};
   }
