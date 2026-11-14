@@ -1,6 +1,7 @@
 import { RecipeDetailView } from "@/components/recipe/RecipeDetailView";
 import { ApiHttpError, serverGetJson } from "@/lib/serverFetch";
-import { recipeImageUrl } from "@/lib/imageUrl";
+import { recipeHeroSlideUrls } from "@/lib/recipeGallery";
+import { hasVerifiedNutrition } from "@/lib/recipeNutritionEvidence";
 import type { RecipeDetail } from "@/lib/types";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -14,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   try {
     const { recipe } = await getDetail(id);
-    const image = recipeImageUrl(recipe.image_r2_key);
+    const image = recipeHeroSlideUrls(recipe.image_r2_key,recipe.gallery_r2_keys)[0];
     const description = recipe.description.slice(0,180);
     return {
       title: recipe.title,
@@ -33,11 +34,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 function structuredRecipe(detail: RecipeDetail) {
   const { recipe, ingredients, steps, metadata } = detail;
-  const image = recipeImageUrl(recipe.image_r2_key);
+  const image = recipeHeroSlideUrls(recipe.image_r2_key,recipe.gallery_r2_keys)[0];
   const site = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://food-ingredients-web.osohoo691016.workers.dev";
   const imageUrl = image ? new URL(image, site).toString() : undefined;
-  const reviewed = metadata?.review_status === "approved";
-  const nutrition = reviewed && metadata?.nutrition_source ? {
+  const nutrition = hasVerifiedNutrition(metadata) ? {
     "@type": "NutritionInformation",
     calories: metadata.calories_kcal != null ? `${metadata.calories_kcal} calories` : undefined,
     proteinContent: metadata.protein_g != null ? `${metadata.protein_g} g` : undefined,

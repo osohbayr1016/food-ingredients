@@ -13,13 +13,14 @@ import { interpolateStep } from "@/lib/interpolateStep";
 import { buildSubstitutionMap, type ScaleCtx } from "@/lib/ingredientScale";
 import type { RecipeDetail } from "@/lib/types";
 import { ALLERGEN_OPTIONS, embedVideoUrl } from "@/lib/recipeMetadata";
+import { hasVerifiedNutrition } from "@/lib/recipeNutritionEvidence";
 import { useMemo, useState } from "react";
 
 export function RecipeDetailView({ data }: { data: RecipeDetail }) {
   const meta = data.metadata;
   const reviewed = meta?.review_status === "approved";
   const videoEmbed = reviewed ? embedVideoUrl(meta?.video_url) : null;
-  const nutritionAvailable = Boolean(reviewed && meta?.nutrition_source && meta?.nutrition_evidence_url && [meta?.calories_kcal, meta?.protein_g, meta?.carbs_g, meta?.fat_g].some(v => v != null));
+  const nutritionAvailable = hasVerifiedNutrition(meta);
   const allergens = (meta?.allergens ?? []).map(code => ALLERGEN_OPTIONS.find(([id]) => id === code)?.[1] ?? code);
   const base = Math.max(1, Number(data.recipe.serves) || 1);
   const [serves, setServes] = useState(base);
