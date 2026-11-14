@@ -2,6 +2,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Hono } from "hono";
 import type { Env } from "../../bindings";
+import { safeRecipeUploadScope } from "../../lib/uploadKeyScope";
 
 export const uploadAdmin = new Hono<{ Bindings: Env }>();
 
@@ -58,10 +59,8 @@ uploadAdmin.post("/upload/presign", async (c) => {
       : null;
   if (!contentType) return c.json({ error: "unsupported_type" }, 400);
 
-  const recipePart =
-    typeof body.recipe_id === "string" && body.recipe_id.trim()
-      ? body.recipe_id.trim()
-      : "draft";
+  const recipePart = safeRecipeUploadScope(body.recipe_id);
+  if (!recipePart) return c.json({ error: "bad_recipe_id" }, 400);
 
   const ext = contentType.endsWith("webp")
     ? "webp"

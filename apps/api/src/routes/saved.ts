@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { bearerPayload } from "../lib/authBearer";
+import { parseRecipeId, parseCookHistoryInput } from "../lib/recipeInteractionInput";
 
 export const saved = new Hono<{ Bindings: Env }>();
 
@@ -22,7 +23,7 @@ saved.post("/saved", async (c) => {
   const jwt = await bearerPayload(c);
   if (!jwt) return c.json({ error: "auth_required" }, 401);
   const body = await c.req.json().catch(() => null) as { recipe_id?: string } | null;
-  const recipeId = body?.recipe_id?.trim();
+  const recipeId = parseRecipeId(body?.recipe_id);
   if (!recipeId) return c.json({ error: "recipe_id_required" }, 400);
   const exists = await c.env.DB.prepare(
     "SELECT id FROM recipes WHERE id = ? AND is_published = 1",
@@ -69,28 +70,20 @@ saved.get("/history", async (c) => {
 saved.post("/history", async (c) => {
   const jwt = await bearerPayload(c);
   if (!jwt) return c.json({ error: "auth_required" }, 401);
-  const body = await c.req.json().catch(() => null) as {
-    recipe_id?: string;
-    rating?: number;
-    personal_note?: string;
-  } | null;
-  const recipeId = body?.recipe_id?.trim();
-  if (!recipeId) return c.json({ error: "recipe_id_required" }, 400);
+  const body = await c.req.json().catch(() => null);
+  const input = parseCookHistoryInput(body);
+  if (!input) return c.json({ error: "invalid_cooking_history" }, 400);
+  const { recipe_id: recipeId, rating, personal_note: note } = input;
   const exists = await c.env.DB.prepare("SELECT id FROM recipes WHERE id = ?")
     .bind(recipeId)
     .first();
   if (!exists) return c.json({ error: "not_found" }, 404);
-  const rating = body?.rating;
-  if (rating !== undefined && (rating < 1 || rating > 5)) {
-    return c.json({ error: "bad_rating" }, 400);
-  }
   const id = crypto.randomUUID();
-  const note = body?.personal_note?.slice(0, 2000) ?? null;
   await c.env.DB.prepare(
     `INSERT INTO cook_history (id, user_id, recipe_id, rating, personal_note)
      VALUES (?,?,?,?,?)`,
   )
-    .bind(id, jwt.sub, recipeId, rating ?? null, note)
+    .bind(id, jwt.sub, recipeId, rating, note)
     .run();
   return c.json({ ok: true, id });
 });

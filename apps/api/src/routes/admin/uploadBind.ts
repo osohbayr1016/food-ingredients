@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../../bindings";
+import { safeRecipeUploadScope } from "../../lib/uploadKeyScope";
 
 const MAX_BYTES = 12 * 1024 * 1024;
 
@@ -37,8 +38,8 @@ uploadBind.post("/upload/image", async (c) => {
   const contentType = normalizeCt(c.req.header("Content-Type"));
   if (!contentType) return c.json({ error: "unsupported_type" }, 400);
 
-  const recipePart = c.req.header("X-Recipe-Id")?.trim() || "draft";
-  if (recipePart.length > 200) return c.json({ error: "bad_recipe_id" }, 400);
+  const recipePart = safeRecipeUploadScope(c.req.header("X-Recipe-Id"));
+  if (!recipePart) return c.json({ error: "bad_recipe_id" }, 400);
 
   const buf = await c.req.arrayBuffer();
   if (buf.byteLength === 0) return c.json({ error: "empty_body" }, 400);

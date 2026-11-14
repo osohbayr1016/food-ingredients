@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { bearerPayload } from "../lib/authBearer";
 import { parseGuestLikeIds } from "../lib/guestLikes";
+import { parseRecipeId } from "../lib/recipeInteractionInput";
 
 export const likes = new Hono<{ Bindings: Env }>();
 
@@ -23,7 +24,7 @@ likes.post("/likes", async (c) => {
   const jwt = await bearerPayload(c);
   if (!jwt) return c.json({ error: "auth_required" }, 401);
   const body = await c.req.json().catch(() => null) as { recipe_id?: string } | null;
-  const recipeId = body?.recipe_id?.trim();
+  const recipeId = parseRecipeId(body?.recipe_id);
   if (!recipeId) return c.json({ error: "recipe_id_required" }, 400);
   const exists = await c.env.DB.prepare(
     "SELECT id FROM recipes WHERE id = ? AND is_published = 1",
