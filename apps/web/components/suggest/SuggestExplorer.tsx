@@ -7,6 +7,7 @@ import { SuggestPantryRow } from "@/components/suggest/SuggestPantryRow";
 import { SuggestResultControls } from "@/components/suggest/SuggestResultControls";
 import { SuggestResults } from "@/components/suggest/SuggestResults";
 import type { SuggestSortKey } from "@/components/suggest/suggestTypes";
+import { nearReadyRecipes } from "@/lib/nearReadyRecipes";
 import { useSuggestPantryUrl } from "@/components/suggest/useSuggestPantryUrl";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -20,6 +21,9 @@ export function SuggestExplorer() {
   } = useSuggestPantryUrl();
   const params = useSearchParams();
   const [sortKey, setSortKey] = useState<SuggestSortKey>("match");
+  const [focusNearReady, setFocusNearReady] = useState(false);
+  const displayRows = useMemo(() => focusNearReady ? nearReadyRecipes(rows) : rows,
+    [focusNearReady,rows]);
   const existingIds = useMemo(() => new Set(pantry.map(row => row.canonical_id)),[pantry]);
   const hasRequestedResults = params?.get("r") === "1";
   const unknownAmount = pantry.some(row => !row.quantity.trim() || !row.unit.trim());
@@ -103,7 +107,7 @@ export function SuggestExplorer() {
           </div>}
         {!busy && rows.length > 0 && <>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-bold text-[#234932]">Тохирох жорууд · {rows.length}</h2>
+            <h2 className="text-lg font-bold text-[#234932]">Тохирох жорууд · {displayRows.length}{focusNearReady ? ` / ${rows.length}` : ""}</h2>
             <div role="group" aria-label="Жор эрэмбэлэх" className="flex gap-1 rounded-xl bg-[#edf5e8] p-1">
               {([["match","Тааралтаар"],["time","Хугацаагаар"]] as const).map(([key,label]) =>
                 <button key={key} type="button" aria-pressed={sortKey === key}
@@ -113,7 +117,19 @@ export function SuggestExplorer() {
                 </button>)}
             </div>
           </div>
-          <SuggestResults rows={rows} sortKey={sortKey} />
+          <label className="flex min-h-11 items-center gap-2 rounded-2xl border border-[#d8e8d0] bg-[#f7fbf4] px-4 py-2 text-sm font-semibold text-[#276440]">
+            <input type="checkbox" checked={focusNearReady}
+              onChange={event=>setFocusNearReady(event.target.checked)}
+              className="h-4 w-4 accent-emerald-700" />
+            Дутуу 0–1 орцтой жоруудыг л харах
+          </label>
+          {focusNearReady && <p className="text-xs text-[#6f7e70]">
+            Хэмжээ нь тодорхойгүй орцууд хангалттай гэсэн үг биш. Жорын дэлгэрэнгүйг шалгана уу.
+          </p>}
+          {displayRows.length ? <SuggestResults rows={displayRows} sortKey={sortKey} /> :
+            <p role="status" className="rounded-xl border border-[#dfe9dc] bg-white p-4 text-sm text-[#617365]">
+              0–1 дутуу орцтой жор олдсонгүй. Шүүлтүүрийг унтрааж бусад жорыг хараарай.
+            </p>}
         </>}
       </section>
     </main>
