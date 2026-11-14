@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { restoreCookingSession } from "@/lib/cookingSession";
+import { shouldNotifyTimer } from "@/lib/cookingTimerNotification";
 import { CookingFinishDialog } from "@/components/cooking/CookingFinishDialog";
 import { CookingProgress } from "@/components/cooking/CookingProgress";
 import { CookingSlideDeck } from "@/components/cooking/CookingSlideDeck";
@@ -39,7 +40,7 @@ export function CookingExperience({
   const [finish, setFinish] = useState(false);
   const sessionKey = `food_ingredients_cook_v2:${data.recipe.id}:${serves}`;
   const [restoredKey, setRestoredKey] = useState<string | null>(null);
-  const vibrated = useRef(new Set<string>());
+  const notified = useRef(new Map<string, number>());
   const { timers, upsert, clear, bootstrap, remaining, formatMmSs, pulse } =
     useBubbleTimers();
 
@@ -73,8 +74,7 @@ export function CookingExperience({
 
   useEffect(() => {
     timers.forEach((timer) => {
-      if (remaining(timer) === 0 && !vibrated.current.has(timer.id)) {
-        vibrated.current.add(timer.id);
+      if (shouldNotifyTimer(timer, notified.current)) {
         navigator.vibrate?.([100, 50, 100]);
       }
     });
@@ -91,7 +91,7 @@ export function CookingExperience({
       }
     } catch { /* in-memory reset still works */ }
     bootstrap([]);
-    vibrated.current.clear();
+    notified.current.clear();
     setIndex(0);
     setSheet(false);
     setFinish(false);
