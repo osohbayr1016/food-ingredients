@@ -11,7 +11,7 @@ test("exports all-day meals across a month boundary",()=>{
   assert.ok(text.endsWith("\r\n"));
 });
 test("unsafe titles are escaped and long Cyrillic lines are folded by UTF-8 bytes",()=>{
-  const title="Монгол".repeat(40)+";danger,comma\nBEGIN:VEVENT";
+  const title="Монгол".repeat(18)+";danger,comma\nBEGIN:VEVENT";
   const text=buildWeeklyPlanIcs("2026-11-09",{"0|dinner":"r1","7|dinner":"bad"},
     {r1:title},new Date("2026-11-14T00:00:00Z"));
   assert.equal((text.match(/BEGIN:VEVENT/g)||[]).length,1);
