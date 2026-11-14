@@ -57,6 +57,8 @@ jobs:
         run: node --experimental-strip-types --test apps/api/tests/editorial-inputs.test.mjs
       - name: Strict public recipe-filter tests
         run: node --experimental-strip-types --test apps/api/tests/recipe-filters.test.mjs
+      - name: Stable recipe sorting tests
+        run: node --experimental-strip-types --test apps/api/tests/recipe-sort.test.mjs
       - name: Cooking session resume tests
         run: node --experimental-strip-types --test apps/web/tests/cooking-session.test.mjs
       - name: Quick weekly meal-planning tests

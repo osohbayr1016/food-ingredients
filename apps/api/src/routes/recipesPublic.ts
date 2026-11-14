@@ -3,6 +3,7 @@ import type { Env } from "../bindings";
 import { ALLERGEN_CODES, metadataFromRow } from "../lib/recipeMetadata";
 import { recipeFtsMatch } from "../lib/recipeSearch";
 import { parseRecipeListFilters } from "../lib/recipeListFilters";
+import { parseRecipeSort, recipeSortSql } from "../lib/recipeSort";
 
 export const recipes = new Hono<{ Bindings: Env }>();
 
@@ -20,6 +21,8 @@ recipes.get("/recipes", async (c) => {
   }
   const parsedFilters = parseRecipeListFilters(difficulty, maxCook);
   if ("error" in parsedFilters) return c.json({ error: parsedFilters.error }, 400);
+  const sort = parseRecipeSort(c.req.query("sort"));
+  if (!sort) return c.json({ error: "invalid_sort" }, 400);
   const excludedRaw = c.req.query("exclude_allergens")?.trim();
   const excluded = excludedRaw ? [...new Set(excludedRaw.split(",").map(code => code.trim()).filter(Boolean))] : [];
   if (excluded.some(code => !ALLERGEN_CODES.includes(code as typeof ALLERGEN_CODES[number]))) return c.json({ error: "invalid_allergen" }, 400);
@@ -85,7 +88,7 @@ recipes.get("/recipes", async (c) => {
              JOIN tags tg ON tg.id = rt.tag_id AND tg.name = ?`;
     params.unshift(tag);
   }
-  sql += ` WHERE ${where.join(" AND ")} ORDER BY COALESCE(pub.published_at,r.created_at) DESC, r.id ASC LIMIT ? OFFSET ?`;
+  sql += ` WHERE ${where.join(" AND ")} ORDER BY ${recipeSortSql(sort)} LIMIT ? OFFSET ?`;
   const stmt = c.env.DB.prepare(sql).bind(...params, pageSize + 1, (page - 1) * pageSize);
   const { results } = await stmt.all();
   const rows = results ?? [];

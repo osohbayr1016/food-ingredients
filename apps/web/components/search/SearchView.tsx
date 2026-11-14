@@ -38,7 +38,9 @@ export function SearchView({ initialQ }: { initialQ: string }) {
   const allergens = params?.get("exclude_allergens") ?? "";
   const maxCalories = params?.get("max_calories") ?? "";
   const minProtein = params?.get("min_protein") ?? "";
-  const filtersKey = [allergens,maxCalories,minProtein].join("|");
+  const rawSort = params?.get("sort");
+  const sort = rawSort === "quickest" || rawSort === "easiest" ? rawSort : "newest";
+  const filtersKey = [allergens,maxCalories,minProtein,sort].join("|");
   const [advancedOpen,setAdvancedOpen] = useState(() => Boolean(allergens || maxCalories || minProtein));
 
   useEffect(() => { setQuery(initialQ); }, [initialQ]);
@@ -62,6 +64,7 @@ export function SearchView({ initialQ }: { initialQ: string }) {
         if (allergens) qs.set("exclude_allergens",allergens);
         if (maxCalories) qs.set("max_calories",maxCalories);
         if (minProtein) qs.set("min_protein",minProtein);
+        if (sort !== "newest") qs.set("sort",sort);
         const response = await clientFetch(`/recipes?${qs.toString()}`, { signal: controller.signal });
         if (!response.ok) throw new Error("search_failed");
         const data = await response.json() as RecipePage;
@@ -105,6 +108,7 @@ export function SearchView({ initialQ }: { initialQ: string }) {
       if (allergens) qs.set("exclude_allergens",allergens);
       if (maxCalories) qs.set("max_calories",maxCalories);
       if (minProtein) qs.set("min_protein",minProtein);
+        if (sort !== "newest") qs.set("sort",sort);
       const response = await clientFetch(`/recipes?${qs.toString()}`);
       if (!response.ok) throw new Error("pagination_failed");
       const data = await response.json() as RecipePage;
@@ -158,6 +162,16 @@ export function SearchView({ initialQ }: { initialQ: string }) {
           <button type="button" aria-pressed={easy} onClick={() => setUrlPatch({difficulty:easy ? "" : "1"})}
             className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${easy
               ? "bg-[#276440] text-white" : "border border-[#e0e9db] bg-white text-[#366546] hover:bg-[#eff6ea]"}`}>Хялбар</button>
+        </div>
+        <div className="flex items-center gap-3">
+          <label htmlFor="recipe-sort" className="text-xs font-semibold text-[#6b7f6e]">Эрэмбэлэх</label>
+          <select id="recipe-sort" value={sort}
+            onChange={event=>setUrlPatch({sort:event.target.value==="newest"?"":event.target.value})}
+            className="min-h-11 rounded-xl border border-[#d9e5d4] bg-white px-3 text-sm font-semibold text-[#276440]">
+            <option value="newest">Шинээр нэмэгдсэн</option>
+            <option value="quickest">Хамгийн хурдан</option>
+            <option value="easiest">Хамгийн хялбар</option>
+          </select>
         </div>
         <details open={advancedOpen} onToggle={event=>setAdvancedOpen(event.currentTarget.open)}
           className="rounded-2xl border border-[#e0e9db] bg-white p-4">
@@ -246,7 +260,7 @@ export function SearchView({ initialQ }: { initialQ: string }) {
       ) : <section aria-labelledby="search-results-title" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="search-results-title" className="text-lg font-bold text-[#203e2c]">
-            {query.trim() ? "Тохирох жорууд" : "Сүүлд нэмэгдсэн жорууд"}
+            {query.trim() ? "Тохирох жорууд" : sort === "newest" ? "Сүүлд нэмэгдсэн жорууд" : "Жорууд"}
           </h2>
           <span role="status" className="text-xs font-medium text-[#738374]">{recipes.length} жор харагдаж байна</span>
         </div>
