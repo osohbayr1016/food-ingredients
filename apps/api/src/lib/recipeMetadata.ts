@@ -8,11 +8,15 @@ type AllergenCode = typeof ALLERGEN_CODES[number];
 const VALID_CODES = new Set<string>(ALLERGEN_CODES);
 
 export function validateRecipeMetadata(m: RecipeMetadata | undefined): string[] {
-  if (!m) return [];
+  if (m == null) return [];
+  if (typeof m !== "object" || Array.isArray(m)) return ["metadata_invalid_payload"];
   const errors: string[] = [];
-  const validUrl = (v: string | null | undefined) => {
-    if (!v) return true;
-    if (v.length > 1000) return false;
+  const validString = (v: unknown, max: number) => v == null ||
+    (typeof v === "string" && v.length <= max);
+  const hasString = (v: unknown) => typeof v === "string" && !!v.trim();
+  const validUrl = (v: unknown) => {
+    if (v == null || v === "") return true;
+    if (typeof v !== "string" || v.length > 1000) return false;
     try {
       const u = new URL(v);
       return u.protocol === "https:" && Boolean(u.hostname);
@@ -24,10 +28,10 @@ export function validateRecipeMetadata(m: RecipeMetadata | undefined): string[] 
   if (!validUrl(m.nutrition_evidence_url)) errors.push("metadata_invalid_nutrition_evidence_url");
   if (m.review_notes != null && (typeof m.review_notes!=="string" || m.review_notes.length>2000))
     errors.push("metadata_invalid_review_notes");
-  if (m.allergen_status==="ingredients_reviewed" && !m.allergen_evidence_url?.trim())
+  if (m.allergen_status==="ingredients_reviewed" && !hasString(m.allergen_evidence_url))
     errors.push("metadata_requires_allergen_evidence");
-  if (m.license_name != null && m.license_name.length > 120) errors.push("metadata_invalid_license");
-  if (m.nutrition_source != null && m.nutrition_source.length > 300) errors.push("metadata_invalid_nutrition_source");
+  if (!validString(m.license_name, 120)) errors.push("metadata_invalid_license");
+  if (!validString(m.nutrition_source, 300)) errors.push("metadata_invalid_nutrition_source");
   if (m.review_status != null && !["pending", "approved"].includes(m.review_status)) errors.push("metadata_invalid_review_status");
   if (m.allergen_status != null && !["unknown", "ingredients_reviewed"].includes(m.allergen_status)) errors.push("metadata_invalid_allergen_status");
   if (m.allergens != null && (!Array.isArray(m.allergens) || m.allergens.length > ALLERGEN_CODES.length ||
@@ -40,9 +44,9 @@ export function validateRecipeMetadata(m: RecipeMetadata | undefined): string[] 
     }
   }
   if ([m.calories_kcal, m.protein_g, m.carbs_g, m.fat_g].some(v => v != null) &&
-      !m.nutrition_source?.trim()) errors.push("metadata_requires_nutrition_source");
+      !hasString(m.nutrition_source)) errors.push("metadata_requires_nutrition_source");
   if ([m.calories_kcal,m.protein_g,m.carbs_g,m.fat_g].some(v=>v!=null) &&
-      !m.nutrition_evidence_url?.trim()) errors.push("metadata_requires_nutrition_evidence");
+      !hasString(m.nutrition_evidence_url)) errors.push("metadata_requires_nutrition_evidence");
   return errors;
 }
 
