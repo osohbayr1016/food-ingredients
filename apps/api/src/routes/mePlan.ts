@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { bearerPayload } from "../lib/authBearer";
 import { parseMealPlanSnapshot, validWeekStart } from "../lib/mealPlanSync";
+import { readBoundedJson } from "../lib/boundedJson";
 
 export const mePlan = new Hono<{ Bindings: Env }>();
 
@@ -16,6 +17,8 @@ mePlan.get("/me/meal-plan", async c => {
   if (!jwt) return c.json({error:"unauthorized"},401);
   const week = c.req.query("week");
   if (!validWeekStart(week)) return c.json({error:"invalid_week"},400);
+  c.header("Cache-Control","no-store");
+  c.header("Vary","Authorization");
   try {
     const row = await c.env.DB.prepare(
       `SELECT plan_json,portions_json,checked_json,titles_json,revision,updated_at
@@ -43,7 +46,11 @@ mePlan.put("/me/meal-plan", async c => {
   const len = c.req.header("Content-Length");
   if (len && /^\d+$/.test(len) && Number(len)>64*1024)
     return c.json({error:"payload_too_large"},413);
-  const payload = parseMealPlanSnapshot(await c.req.json().catch(()=>null));
+  c.header("Cache-Control","no-store");
+  const decoded = await readBoundedJson(c.req.raw.body);
+  if (!decoded.ok)
+    return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const payload = parseMealPlanSnapshot(decoded.value);
   if (!payload) return c.json({error:"invalid_meal_plan"},400);
   const {week_start:week,expected_revision:revision,plan,portions,checked,titles} = payload;
   const values = [JSON.stringify(plan),JSON.stringify(portions),

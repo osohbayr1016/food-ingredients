@@ -46,6 +46,6 @@ Environment overrides: `SMOKE_API_ORIGIN` and `SMOKE_WEB_ORIGIN` (HTTPS only).
 3. **Nutrition/allergen science:** evidence fields and strict filters are implemented, but expert review and a validated comprehensive ingredient database are still required; do not market the platform as medically verified.
 4. **Licensing and continuous food supply:** source terms, video rights, commercial access, licensed multilingual content and editorial verification must be established before daily publishing can safely be enabled.
 5. **Production operations:** real backups, disaster recovery, legal/privacy review, monitoring and domain configuration require action in the actual Cloudflare environment.
-6. **Data policy:** guest pantry and guest favorites remain local-device storage. Weekly meal plans also remain local by default, but a signed-in user can explicitly save/restore a separate cloud snapshot for each week; conflict (409) responses require a reload and manual decision.
+6. **Data policy:** account exports now include every saved weekly cloud meal plan (choices, portions, shopping checkboxes, titles and revisions). Guest pantry and guest favorites remain local-device storage. Weekly meal plans also remain local by default, but a signed-in user can explicitly save/restore a separate cloud snapshot for each week; conflict (409) responses require a reload and manual decision.
 
 **Do not claim the site is fully production-ready or that production was deployed from a green GitHub CI alone.**
