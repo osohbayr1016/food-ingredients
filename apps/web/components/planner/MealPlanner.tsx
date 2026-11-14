@@ -5,6 +5,7 @@ import { clientFetch } from "@/lib/clientApi";
 import type { RecipeDetail, RecipeListItem } from "@/lib/types";
 import { aggregateMealShopping, mondayOfWeek, type ShoppingLine } from "@/lib/mealShopping";
 import { fillQuickDinners, mapBounded } from "@/lib/quickMealPlan";
+import { MealPlanCloudSync } from "@/components/planner/MealPlanCloudSync";
 import { PANTRY_STORAGE_KEY, parsePantryStorage, todayLocalIso, usablePantry } from "@/lib/pantryInventory";
 
 type Meal = "breakfast" | "lunch" | "dinner";
@@ -300,8 +301,17 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
       <header className="space-y-2">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#57845b]">Миний төлөвлөгөө</p>
         <h1 className="text-3xl font-bold tracking-tight text-[#213f2c]">7 хоногийн хоолны төлөвлөгөө</h1>
-        <p className="text-sm leading-relaxed text-zinc-600">Өдөрт 3 хоолоо сонгоорой. Орцууд нэгтгэгдэж худалдан авах жагсаалт үүснэ. Таны төлөвлөгөө энэ төхөөрөмж дээр хадгалагдана.</p>
+        <p className="text-sm leading-relaxed text-zinc-600">Өдөрт 3 хоолоо сонгоорой. Орцууд нэгтгэгдэж худалдан авах жагсаалт үүснэ. Таны төлөвлөгөө энэ төхөөрөмж дээр хадгалагдана. Хүсвэл бүртгэлдээ хадгалж өөр төхөөрөмжөөс татаж болно.</p>
       </header>
+      <MealPlanCloudSync weekStart={weekStart}
+        local={{plan,portions,checked,titles}}
+        onRestore={snapshot=>{
+          setPlan(snapshot.plan);
+          setPortions(snapshot.portions);
+          setChecked(snapshot.checked);
+          setTitles(snapshot.titles);
+          setQuickPlanMessage("Бүртгэл дээрх төлөвлөгөөг татлаа. Жор болон худалдан авах жагсаалтыг шалгаарай.");
+        }}/>
       {storageWarning && <p role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Browser-д хадгалах боломжгүй байна. Та табыг хаахаас өмнө төлөвлөгөөгөө тэмдэглэж аваарай.</p>}
       <section className="space-y-4 rounded-3xl border border-[#e0e9dd] bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">

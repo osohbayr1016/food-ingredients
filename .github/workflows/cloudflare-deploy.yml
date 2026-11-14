@@ -144,6 +144,15 @@ jobs:
           packageManager: pnpm
           command: d1 execute food-ingredients --remote --file=db/0017_recipe_evidence.sql --yes
 
+      - name: Apply weekly meal plan account snapshot migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: apps/api
+          wranglerVersion: "4"
+          packageManager: pnpm
+          command: d1 execute food-ingredients --remote --file=db/0018_account_meal_plans.sql --yes
+
       - name: Deploy API Worker
         uses: cloudflare/wrangler-action@v3
         with:

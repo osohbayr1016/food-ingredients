@@ -12,6 +12,7 @@ import { saved } from "./routes/saved";
 import { admin } from "./routes/admin";
 import { meNutrition } from "./routes/meNutrition";
 import { mePantry } from "./routes/mePantry";
+import { mePlan } from "./routes/mePlan";
 import { meData } from "./routes/meData";
 import { importDailyCandidate } from "./lib/dailyRecipeImport";
 import { publishOneApprovedRecipe } from "./lib/dailyApprovedPublish";
@@ -38,6 +39,7 @@ app.get("/health/ready", async (c) => {
     await c.env.DB.prepare("SELECT 1 FROM recipe_review_events LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM recipe_publication_dates LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM user_pantry_snapshots LIMIT 1").all();
+    await c.env.DB.prepare("SELECT 1 FROM user_meal_plan_snapshots LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM user_session_versions LIMIT 1").all();
     await c.env.DB.prepare("SELECT 1 FROM recipe_evidence LIMIT 1").all();
     return c.json({ ok: true, database: "ready" });
@@ -56,6 +58,7 @@ app.route("/", likes);
 app.route("/", saved);
 app.route("/", meNutrition);
 app.route("/", mePantry);
+app.route("/", mePlan);
 app.route("/", meData);
 app.route("/", admin);
 
