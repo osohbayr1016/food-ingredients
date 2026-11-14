@@ -7,6 +7,8 @@ import { aggregateMealShopping, mondayOfWeek, type ShoppingLine } from "@/lib/me
 import { fillQuickDinners, mapBounded } from "@/lib/quickMealPlan";
 import { MealPlanCloudSync } from "@/components/planner/MealPlanCloudSync";
 import { buildWeeklyPlanIcs } from "@/lib/mealCalendarExport";
+import { parsePlannerStorage, cleanPlannerSelections, cleanPlannerPortions,
+  cleanPlannerChecked, cleanPlannerTitles } from "@/lib/mealPlannerStorage";
 import { PANTRY_STORAGE_KEY, parsePantryStorage, todayLocalIso, usablePantry } from "@/lib/pantryInventory";
 
 type Meal = "breakfast" | "lunch" | "dinner";
@@ -115,23 +117,16 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
         localStorage.setItem(planKey,legacy);
         localStorage.removeItem(LEGACY_PLAN_KEY);
       }
-      const raw: unknown = JSON.parse(source ?? "{}");
-      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-        setPlan(Object.fromEntries(Object.entries(raw).filter(([key,value]) =>
-          /^[0-6]\|(breakfast|lunch|dinner)$/.test(key) && typeof value === "string" && value.length < 150)));
-      }
+      setPlan(cleanPlannerSelections(parsePlannerStorage(source)));
     } catch { /* malformed storage becomes an empty plan */ }
     try {
-      const raw = JSON.parse(localStorage.getItem(checkedKey) ?? "{}") as Record<string,boolean>;
-      if (raw && typeof raw === "object") setChecked(raw);
+      setChecked(cleanPlannerChecked(parsePlannerStorage(localStorage.getItem(checkedKey))));
     } catch { /* ignore */ }
     try {
-      const raw = JSON.parse(localStorage.getItem(portionsKey) ?? "{}") as Record<string,number>;
-      if (raw && typeof raw === "object") setPortions(raw);
+      setPortions(cleanPlannerPortions(parsePlannerStorage(localStorage.getItem(portionsKey))));
     } catch { /* ignore */ }
     try {
-      const raw = JSON.parse(localStorage.getItem(titlesKey) ?? "{}") as Record<string,string>;
-      if (raw && typeof raw === "object") setTitles(raw);
+      setTitles(cleanPlannerTitles(parsePlannerStorage(localStorage.getItem(titlesKey))));
     } catch { /* ignore */ }
     setHydrated(true);
   }, [planKey, checkedKey, portionsKey, titlesKey, isCurrent]);
@@ -343,7 +338,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
             Календарь (.ics)
           </button>}
           {filled > 0 && <button type="button"
-            onClick={() => { if (window.confirm("7 хоногийн төлөвлөгөөг арилгах уу?")) { setPlan({}); setPortions({}); } }}
+            onClick={() => { if (window.confirm("7 хоногийн төлөвлөгөөг арилгах уу?")) { setPlan({}); setPortions({}); setChecked({}); } }}
             className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600">Арилгах</button>}
         </div>
         {quickPlanMessage && <p role="status" className="rounded-2xl border border-[#dcead7] bg-[#f1f8ed] px-4 py-3 text-sm text-[#276440]">{quickPlanMessage}</p>}
@@ -381,6 +376,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
                   <select value={chosen} onChange={e => {
                     const id = e.target.value;
                     setPlan(prev => ({...prev,[key]:id}));
+                    setChecked({}); // Prior grocery marks no longer prove new quantities are covered.
                     const found = matchingRecipes.find(r=>r.id===id);
                     if (found) setTitles(prev=>({...prev,[id]:found.title}));
                     setPortions(prev=>{const next={...prev};delete next[key];return next;});
@@ -400,8 +396,10 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
                       title={!servesKnown ? "Жорын анхны порцыг ачаалж байна" : undefined}
                       onChange={e => {
                         const number = Number(e.target.value);
-                        if (Number.isSafeInteger(number) && number >= 1 && number <= 30)
+                        if (Number.isSafeInteger(number) && number >= 1 && number <= 30) {
                           setPortions(prev=>({...prev,[key]:number}));
+                          setChecked({});
+                        }
                       }}
                       className="min-h-10 w-20 rounded-lg border border-[#d7e4d3] bg-white px-2 text-right text-sm font-normal" />
                   </label>
