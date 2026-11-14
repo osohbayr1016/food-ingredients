@@ -9,6 +9,7 @@ export type Env = {
   R2_ACCOUNT_ID: string;
   R2_ACCESS_KEY_ID: string;
   R2_SECRET_ACCESS_KEY: string;
+  R2_PRESIGN_ENABLED?: string;
   AUTO_IMPORT_ENABLED?: string;
   AUTO_DAILY_PUBLISH?: string;
   THEMEALDB_API_KEY?: string;

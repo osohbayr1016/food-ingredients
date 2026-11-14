@@ -49,3 +49,13 @@ Environment overrides: `SMOKE_API_ORIGIN` and `SMOKE_WEB_ORIGIN` (HTTPS only).
 6. **Data policy:** account exports now include every saved weekly cloud meal plan (choices, portions, shopping checkboxes, titles and revisions). Guest pantry and guest favorites remain local-device storage. Weekly meal plans also remain local by default, but a signed-in user can explicitly save/restore a separate cloud snapshot for each week; conflict (409) responses require a reload and manual decision.
 
 **Do not claim the site is fully production-ready or that production was deployed from a green GitHub CI alone.**
+
+## Legacy direct presigned R2 uploads
+`POST /admin/upload/presign` is now **disabled by default**; the supported
+browser uploader uses `POST /admin/upload/image` with streaming-size and
+JPEG/PNG/WebP signature checks. If the legacy S3 URL endpoint is explicitly
+enabled through `R2_PRESIGN_ENABLED=true`, callers must provide
+`size_bytes` (1–12 MiB) and an accepted `content_type`; returned URLs
+bind Content-Length and Content-Type as required signed headers. This
+does not decode uploaded image data, so newly presigned objects need
+separate content verification before publication. Test R2 signing in staging.

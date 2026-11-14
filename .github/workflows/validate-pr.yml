@@ -65,6 +65,8 @@ jobs:
         run: node --experimental-strip-types --test apps/api/tests/request-validation.test.mjs
       - name: Bounded image streaming and signature tests
         run: node --experimental-strip-types --test apps/api/tests/image-body-validation.test.mjs
+      - name: R2 presigned exact-size signature tests
+        run: node --experimental-strip-types --test apps/api/tests/presigned-image-policy.test.mjs
       - name: Editorial import and tag input tests
         run: node --experimental-strip-types --test apps/api/tests/editorial-inputs.test.mjs
       - name: Strict public recipe-filter tests
