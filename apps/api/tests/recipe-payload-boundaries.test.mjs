@@ -42,6 +42,30 @@ test("strict nested recipe IDs and optional fields prevent D1/trim runtime failu
     assert.notDeepEqual(validate({...valid,...bad}),[],JSON.stringify(bad));
   }
 });
+test("duplicate stable child IDs are rejected before D1 insert batches",()=>{
+  const ingredient={...valid.ingredients[0]};
+  const step={...valid.steps[0]};
+  const ingredientErrors=validate({...valid,ingredients:[ingredient,{...ingredient,name:"Onion"}]});
+  const stepErrors=validate({...valid,steps:[step,{...step,description:"Cook slowly."}]});
+  assert.ok(ingredientErrors.includes("duplicate_ingredient_ids"));
+  assert.ok(stepErrors.includes("duplicate_step_ids"));
+  assert.deepEqual(validate({...valid,ingredients:[ingredient,{...ingredient,id:"i2"}]}),[]);
+  assert.deepEqual(validate({...valid,steps:[step,{...step,id:"s2"}]}),[]);
+});
+
+test("untrusted numeric license cannot crash publish validation",()=>{
+  const payload={...valid,
+    recipe:{...valid.recipe,is_published:true},
+    ingredients:[...valid.ingredients,{...valid.ingredients[0],id:"i2",name:"Onion"}],
+    steps:[...valid.steps,{...valid.steps[0],id:"s2",description:"Serve the meal."}],
+    metadata:{review_status:"approved",license_name:123},
+  };
+  assert.doesNotThrow(()=>validate(payload));
+  const errs=validate(payload);
+  assert.ok(errs.includes("metadata_invalid_license"));
+  assert.ok(errs.includes("publish_requires_content_rights"));
+});
+
 test("metadata validation is resilient to malformed untrusted JSON",()=>{
   for(const value of [
     {source_url:42},{video_url:{url:"https://example.org"}},

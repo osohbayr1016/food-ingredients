@@ -55,6 +55,21 @@ export function validateRecipePatch(value: unknown): string[] {
   if (!int(r.difficulty, 1, 3)) errors.push("invalid_difficulty");
   if (p.ingredients.length > 100) errors.push("too_many_ingredients");
   if (p.steps.length > 80) errors.push("too_many_steps");
+  // Duplicate stable child IDs would violate the primary key during batched D1 inserts.
+  const duplicateIds = (items: unknown[]): boolean => {
+    const ids = new Set<string>();
+    for (const item of items) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+      const value = (item as {id?: unknown}).id;
+      if (typeof value !== "string" || !value.trim()) continue;
+      const id = value.trim();
+      if (ids.has(id)) return true;
+      ids.add(id);
+    }
+    return false;
+  };
+  if (duplicateIds(p.ingredients)) errors.push("duplicate_ingredient_ids");
+  if (duplicateIds(p.steps)) errors.push("duplicate_step_ids");
   const stringUnder = (v: unknown, max: number) => v == null ||
     (typeof v === "string" && v.length <= max);
   const idUnder = (v: unknown) => stringUnder(v, 150);
@@ -86,7 +101,8 @@ export function validateRecipePatch(value: unknown): string[] {
   }
   if (r.is_published === true || r.is_published === 1) {
     if (p.metadata?.review_status !== "approved") errors.push("publish_requires_editorial_approval");
-    if (!p.metadata?.license_name?.trim()) errors.push("publish_requires_content_rights");
+    if (typeof p.metadata?.license_name !== "string" ||
+        !p.metadata.license_name.trim()) errors.push("publish_requires_content_rights");
     if (p.ingredients.length < 2) errors.push("publish_requires_ingredients");
     if (p.steps.length < 2) errors.push("publish_requires_steps");
     if (!Number.isFinite(r.prep_time + r.cook_time) || r.prep_time + r.cook_time <= 0) errors.push("publish_requires_known_time");
