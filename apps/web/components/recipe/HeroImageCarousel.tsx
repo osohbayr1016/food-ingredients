@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { shouldAutoplayCarousel } from "@/lib/carouselMotion";
 
 type Props = {
   slides: string[];
@@ -12,6 +13,10 @@ export function HeroImageCarousel({ slides, onIndexChange }: Props) {
   const n = slides.length;
   const scrollerRef = useRef<HTMLDivElement>(null);
   const jumpingRef = useRef(false);
+  const hoveringRef = useRef(false);
+  const focusRef = useRef(false);
+  const lastInteractionRef = useRef(0);
+  const reducedMotionRef = useRef(false);
   const settleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const extended = useMemo(() => {
@@ -103,11 +108,25 @@ export function HeroImageCarousel({ slides, onIndexChange }: Props) {
   }, [n, settle]);
 
   useEffect(() => {
+    const media=window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!media) return;
+    const update=()=>{ reducedMotionRef.current=media.matches; };
+    update();
+    media.addEventListener?.("change",update);
+    return ()=>media.removeEventListener?.("change",update);
+  }, []);
+
+  useEffect(() => {
     if (n < 2) return;
     const el = scrollerRef.current;
     if (!el) return;
     const id = setInterval(() => {
-      if (jumpingRef.current || document.visibilityState === "hidden") return;
+      if (jumpingRef.current || !shouldAutoplayCarousel({
+        slides:n,visible:document.visibilityState!=="hidden",
+        reducedMotion:reducedMotionRef.current,
+        hovering:hoveringRef.current,focused:focusRef.current,
+        now:Date.now(),lastInteraction:lastInteractionRef.current,
+      })) return;
       const w = el.clientWidth;
       if (w <= 0) return;
       const i = Math.round(el.scrollLeft / w);
@@ -132,7 +151,28 @@ export function HeroImageCarousel({ slides, onIndexChange }: Props) {
   return (
     <div
       ref={scrollerRef}
-      className="absolute inset-0 z-0 flex h-full w-full snap-x snap-mandatory overflow-y-hidden overflow-x-scroll overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [touch-action:pan-x]"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Жорын зургууд"
+      tabIndex={0}
+      onMouseEnter={() => { hoveringRef.current = true; }}
+      onMouseLeave={() => { hoveringRef.current = false; }}
+      onFocus={() => { focusRef.current = true; }}
+      onBlur={() => { focusRef.current = false; }}
+      onWheel={() => { lastInteractionRef.current = Date.now(); }}
+      onTouchStart={() => { lastInteractionRef.current = Date.now(); }}
+      onPointerDown={() => { lastInteractionRef.current = Date.now(); }}
+      onKeyDown={event => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        const el=scrollerRef.current;
+        if (!el || !el.clientWidth) return;
+        event.preventDefault();
+        lastInteractionRef.current=Date.now();
+        const current=Math.round(el.scrollLeft / el.clientWidth);
+        const next=Math.max(0,Math.min(n+1,current+(event.key==="ArrowRight"?1:-1)));
+        el.scrollTo({left:next*el.clientWidth,behavior:"smooth"});
+      }}
+      className="absolute inset-0 z-0 flex h-full w-full focus-visible:outline-2 focus-visible:outline-white snap-x snap-mandatory overflow-y-hidden overflow-x-scroll overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [touch-action:pan-x]"
       style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
     >
       {extended.map((src, idx) => (
