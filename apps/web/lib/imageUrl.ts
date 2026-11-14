@@ -13,9 +13,9 @@ export function recipeImageUrl(key: string | null | undefined) {
       return u.protocol === "https:" && !u.username && !u.password ? t : null;
     } catch { return null; }
   }
-  const key = t.startsWith("/") ? t.slice(1) : t;
-  if (!key || !/^[\p{L}\p{N}_./~-]+$/u.test(key) ||
-      key.split("/").some(part => !part || part === "." || part === "..")) return null;
+  const pathPart = t.startsWith("/") ? t.slice(1) : t;
+  if (!pathPart || !/^[\p{L}\p{N}_./~-]+$/u.test(pathPart) ||
+      pathPart.split("/").some(part => !part || part === "." || part === "..")) return null;
   if (t.startsWith("/")) return t;
   const base = r2Base()?.replace(/\/$/, "");
   if (!base) return null;
