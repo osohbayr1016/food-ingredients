@@ -1,17 +1,11 @@
 import { Hono } from "hono";
 import type { Env } from "../../bindings";
 import { safeRecipeUploadScope } from "../../lib/uploadKeyScope";
-
-const MAX_BYTES = 12 * 1024 * 1024;
+import { imageMagicMatches, readBoundedImageBody, supportedImageMime,
+  MAX_RECIPE_IMAGE_BYTES } from "../../lib/imageBodyValidation";
 
 function trimEnv(v: string | undefined): string {
   return typeof v === "string" ? v.trim() : "";
-}
-
-function normalizeCt(h: string | undefined | null): string | null {
-  const ct = (h || "").split(";")[0]?.trim().toLowerCase() ?? "";
-  if (ct === "image/webp" || ct === "image/jpeg" || ct === "image/png") return ct;
-  return null;
 }
 
 function extForCt(ct: string): string {
@@ -35,23 +29,28 @@ uploadBind.post("/upload/image", async (c) => {
       501,
     );
 
-  const contentType = normalizeCt(c.req.header("Content-Type"));
+  const contentType = supportedImageMime(c.req.header("Content-Type"));
   if (!contentType) return c.json({ error: "unsupported_type" }, 400);
 
   const recipePart = safeRecipeUploadScope(c.req.header("X-Recipe-Id"));
   if (!recipePart) return c.json({ error: "bad_recipe_id" }, 400);
 
-  const buf = await c.req.arrayBuffer();
-  if (buf.byteLength === 0) return c.json({ error: "empty_body" }, 400);
-  if (buf.byteLength > MAX_BYTES)
-    return c.json({ error: "too_large", max_bytes: MAX_BYTES }, 413);
+  const lengthHeader = c.req.header("Content-Length");
+  if (lengthHeader && /^\d+$/.test(lengthHeader) && Number(lengthHeader) > MAX_RECIPE_IMAGE_BYTES)
+    return c.json({ error: "too_large", max_bytes: MAX_RECIPE_IMAGE_BYTES }, 413);
+  const body = await readBoundedImageBody(c.req.raw.body);
+  if (!body.ok) return body.error === "too_large"
+    ? c.json({ error: body.error, max_bytes: MAX_RECIPE_IMAGE_BYTES }, 413)
+    : c.json({ error: body.error }, 400);
+  if (!imageMagicMatches(body.bytes, contentType))
+    return c.json({ error: "invalid_image_signature" }, 415);
 
   const r2_key = `recipes/${recipePart}/${crypto.randomUUID()}.${extForCt(
     contentType,
   )}`;
 
   try {
-    await c.env.BUCKET.put(r2_key, buf, {
+    await c.env.BUCKET.put(r2_key, body.bytes, {
       httpMetadata: {
         contentType,
         cacheControl: "public, max-age=31536000, immutable",
