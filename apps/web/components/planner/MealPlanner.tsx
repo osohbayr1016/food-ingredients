@@ -6,6 +6,7 @@ import type { RecipeDetail, RecipeListItem } from "@/lib/types";
 import { aggregateMealShopping, mondayOfWeek, type ShoppingLine } from "@/lib/mealShopping";
 import { fillQuickDinners, mapBounded } from "@/lib/quickMealPlan";
 import { MealPlanCloudSync } from "@/components/planner/MealPlanCloudSync";
+import { buildWeeklyPlanIcs } from "@/lib/mealCalendarExport";
 import { PANTRY_STORAGE_KEY, parsePantryStorage, todayLocalIso, usablePantry } from "@/lib/pantryInventory";
 
 type Meal = "breakfast" | "lunch" | "dinner";
@@ -100,6 +101,7 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
   const [loadError, setLoadError] = useState(false);
   const [retry, setRetry] = useState(0);
   const [copied, setCopied] = useState(false);
+  useEffect(() => { setCopied(false); }, [shopping]);
   const [storageWarning, setStorageWarning] = useState(false);
   const [quickPlanMessage, setQuickPlanMessage] = useState("");
 
@@ -290,6 +292,22 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
     setQuickPlanMessage(`${result.added} оройн хоол сонголоо. Хүссэн өдрийн хоолоо өөрчилж болно. Орц, харшил болон хадгалах хугацааг заавал шалгаарай.`);
   }
 
+  function downloadCalendar() {
+    const titleMap = Object.fromEntries(recipes.map(recipe => [recipe.id,recipe.title]));
+    for(const [id,title] of Object.entries(titles))titleMap[id]=title;
+    for(const [id,meta] of Object.entries(selectedMeta))titleMap[id]=meta.title;
+    const ics=buildWeeklyPlanIcs(weekStart,plan,titleMap);
+    const blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`food-ingredients-${weekStart}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+
   async function copyShopping() {
     const text = shopping.map(s => `${checked[s.key] ? "✓ " : "□ "}${s.name} — ${formatted(s.quantity)} ${s.unit}`).join("\n");
     try { await navigator.clipboard.writeText(text); setCopied(true); }
@@ -320,6 +338,10 @@ function WeekPlanner({ recipes, weekStart, isCurrent }: {
             className="min-h-11 rounded-xl bg-[#276440] px-4 text-sm font-bold text-white disabled:opacity-50">
             7 өдрийн оройн хоол сонгох
           </button>
+          {filled > 0 && <button type="button" onClick={downloadCalendar}
+            className="min-h-11 rounded-xl border border-[#cde1c9] bg-[#f4faf1] px-4 text-sm font-bold text-[#276440]">
+            Календарь (.ics)
+          </button>}
           {filled > 0 && <button type="button"
             onClick={() => { if (window.confirm("7 хоногийн төлөвлөгөөг арилгах уу?")) { setPlan({}); setPortions({}); } }}
             className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600">Арилгах</button>}
