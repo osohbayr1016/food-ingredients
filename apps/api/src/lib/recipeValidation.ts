@@ -1,6 +1,41 @@
 import type { RecipePatchPayload } from "./recipePayload";
 import { validateRecipeMetadata } from "./recipeMetadata";
 
+/** R2 object keys, root-relative assets and secure external image URLs only. */
+export function validRecipeImageReference(value: unknown): boolean {
+  if (typeof value !== "string" || !value.trim() || value.length > 2000) return false;
+  const raw = value.trim();
+  if (/[\\\u0000-\u001F\u007F]/.test(raw) || raw.startsWith("//")) return false;
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const u = new URL(raw);
+      return u.protocol === "https:" && !!u.hostname && !u.username && !u.password;
+    } catch { return false; }
+  }
+  const key = raw.startsWith("/") ? raw.slice(1) : raw;
+  if (!key || !/^[\p{L}\p{N}_./~-]+$/u.test(key)) return false;
+  return key.split("/").every(part => part && part !== "." && part !== "..");
+}
+
+/** Validate legacy hero JSON and gallery arrays without silently hiding bad images. */
+export function validRecipeImageFields(main: unknown, gallery: unknown): boolean {
+  const validArray = (raw: string) => {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length <= 30 &&
+        parsed.every(validRecipeImageReference);
+    } catch { return false; }
+  };
+  if (main != null && main !== "") {
+    if (typeof main !== "string" || main.length > 12000) return false;
+    if (main.trim().startsWith("[") ? !validArray(main) : !validRecipeImageReference(main)) return false;
+  }
+  if (gallery != null && gallery !== "") {
+    if (typeof gallery !== "string" || gallery.length > 12000 || !validArray(gallery)) return false;
+  }
+  return true;
+}
+
 /** Fail closed on invalid publication metadata; drafts may be incomplete. */
 export function validateRecipePatch(value: unknown): string[] {
   if (!value || typeof value !== "object" || Array.isArray(value)) return ["invalid_payload"];
@@ -26,7 +61,7 @@ export function validateRecipePatch(value: unknown): string[] {
   if (p.tag_ids != null && (!Array.isArray(p.tag_ids) || p.tag_ids.length > 40 ||
       p.tag_ids.some(id => typeof id !== "string" || !id.trim() || id.length > 100) ||
       new Set(p.tag_ids).size !== p.tag_ids.length)) errors.push("invalid_tags");
-  if (!stringUnder(r.image_r2_key, 2000) || !stringUnder(r.gallery_r2_keys, 12000))
+  if (!validRecipeImageFields(r.image_r2_key, r.gallery_r2_keys))
     errors.push("invalid_recipe_images");
   if (!stringUnder(r.import_source, 120) || !stringUnder(r.import_external_id, 200))
     errors.push("invalid_import_provenance");
