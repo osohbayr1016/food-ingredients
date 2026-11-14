@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { bearerPayload } from "../lib/authBearer";
+import { readBoundedJson } from "../lib/boundedJson";
 import { parseRecipeId, parseCookHistoryInput } from "../lib/recipeInteractionInput";
 
 export const saved = new Hono<{ Bindings: Env }>();
@@ -22,7 +23,9 @@ saved.get("/saved", async (c) => {
 saved.post("/saved", async (c) => {
   const jwt = await bearerPayload(c);
   if (!jwt) return c.json({ error: "auth_required" }, 401);
-  const body = await c.req.json().catch(() => null) as { recipe_id?: string } | null;
+  const decoded = await readBoundedJson(c.req.raw.body, 8 * 1024);
+  if (!decoded.ok) return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const body = decoded.value as { recipe_id?: string } | null;
   const recipeId = parseRecipeId(body?.recipe_id);
   if (!recipeId) return c.json({ error: "recipe_id_required" }, 400);
   const exists = await c.env.DB.prepare(
@@ -70,8 +73,9 @@ saved.get("/history", async (c) => {
 saved.post("/history", async (c) => {
   const jwt = await bearerPayload(c);
   if (!jwt) return c.json({ error: "auth_required" }, 401);
-  const body = await c.req.json().catch(() => null);
-  const input = parseCookHistoryInput(body);
+  const decoded = await readBoundedJson(c.req.raw.body, 8 * 1024);
+  if (!decoded.ok) return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const input = parseCookHistoryInput(decoded.value);
   if (!input) return c.json({ error: "invalid_cooking_history" }, 400);
   const { recipe_id: recipeId, rating, personal_note: note } = input;
   const exists = await c.env.DB.prepare("SELECT id FROM recipes WHERE id = ?")

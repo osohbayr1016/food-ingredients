@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../../bindings";
 import { parseMealDbId, parseMealDbSearchQuery } from "../../lib/editorialInputs";
+import { readBoundedJson } from "../../lib/boundedJson";
 import { insertRecipe } from "../../lib/applyRecipePatch";
 import {
   findRecipeByImport,
@@ -80,7 +81,9 @@ themealdbImportAdmin.get("/import/themealdb/preview", async (c) => {
 });
 
 themealdbImportAdmin.post("/import/themealdb/commit", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as {
+  const decoded = await readBoundedJson(c.req.raw.body,8*1024);
+  if (!decoded.ok) return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const body = decoded.value as {
     idMeal?: unknown;
     publish?: boolean;
   } | null;

@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import type { Env } from "../../bindings";
 import { safeRecipeUploadScope } from "../../lib/uploadKeyScope";
 import { parsePresignImageRequest } from "../../lib/presignedImagePolicy";
+import { readBoundedJson } from "../../lib/boundedJson";
 
 export const uploadAdmin = new Hono<{ Bindings: Env }>();
 
@@ -49,7 +50,9 @@ uploadAdmin.post("/upload/presign", async (c) => {
       501,
     );
 
-  const body = await c.req.json().catch(() => null) as Record<string,unknown> | null;
+  const decoded = await readBoundedJson(c.req.raw.body,8*1024);
+  if (!decoded.ok) return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const body = decoded.value as Record<string,unknown> | null;
   const parsed = parsePresignImageRequest(body);
   if (!parsed.ok) return c.json({ error: parsed.error }, 400);
   const { contentType, sizeBytes } = parsed;
