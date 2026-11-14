@@ -89,6 +89,8 @@ jobs:
         run: node --experimental-strip-types --test apps/web/tests/meal-shopping.test.mjs
       - name: Source-backed recipe nutrition metadata tests
         run: node --experimental-strip-types --test apps/web/tests/recipe-nutrition-evidence.test.mjs
+      - name: Accessible carousel motion policy tests
+        run: node --experimental-strip-types --test apps/web/tests/carousel-motion.test.mjs
       - name: Recipe recommendation sorting tests
         run: node --experimental-strip-types --test apps/web/tests/suggest-sort.test.mjs
       - name: Production smoke runner syntax
