@@ -3,7 +3,7 @@ import { apiBase } from "./publicEnv";
 function normalizeImageContentType(blob: Blob): string {
   const t = blob.type;
   if (t === "image/webp" || t === "image/jpeg" || t === "image/png") return t;
-  return "image/jpeg";
+  throw new Error("Only JPEG, PNG or WebP images are supported.");
 }
 
 /** Uploads via API Worker → R2 binding (no browser PUT to presigned S3 URL). */

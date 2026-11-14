@@ -57,6 +57,8 @@ jobs:
         run: node --experimental-strip-types --test apps/api/tests/guest-likes.test.mjs
       - name: Recipe request and upload path validation tests
         run: node --experimental-strip-types --test apps/api/tests/request-validation.test.mjs
+      - name: Bounded image streaming and signature tests
+        run: node --experimental-strip-types --test apps/api/tests/image-body-validation.test.mjs
       - name: Editorial import and tag input tests
         run: node --experimental-strip-types --test apps/api/tests/editorial-inputs.test.mjs
       - name: Strict public recipe-filter tests
