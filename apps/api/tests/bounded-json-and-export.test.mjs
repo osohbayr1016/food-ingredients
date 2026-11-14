@@ -47,3 +47,18 @@ test("rejects incomplete multibyte JSON rather than repairing the payload silent
   const result=await readBoundedJson(stream([bad]),512);
   assert.deepEqual(result,{ok:false,error:"invalid_json"});
 });
+
+test("legitimate multilingual pantry snapshots fit within the dedicated 128 KiB budget",async()=>{
+  const bytes=enc.encode(JSON.stringify({
+    items:Array.from({length:100},(_,i)=>({
+      canonical_id:"ingredient-"+i,
+      name:"Ногоо".repeat(24),
+      quantity:"120",unit:"г",expires_on:"2026-12-01",
+    })),
+    expected_revision:4,
+  }));
+  assert.ok(bytes.byteLength>8192 && bytes.byteLength<128*1024);
+  const result=await readBoundedJson(stream([bytes.slice(0,50),bytes.slice(50)]),128*1024);
+  assert.equal(result.ok,true);
+  if(result.ok)assert.equal(result.value.items.length,100);
+});

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { bearerPayload } from "../lib/authBearer";
 import { verifyPassword } from "../lib/password";
+import { readBoundedJson } from "../lib/boundedJson";
 import { checkAuthRateLimit } from "../lib/authRateLimit";
 import { mealPlanExportRows, type StoredMealPlanExportRow } from "../lib/mealPlanExport";
 
@@ -66,7 +67,9 @@ meData.delete("/me/nutrition",async c=>{
 meData.delete("/me/account",async c=>{
   const jwt=await bearerPayload(c);
   if(!jwt) return c.json({error:"unauthorized"},401);
-  const body=await c.req.json().catch(()=>null) as {password?:unknown;confirm_username?:unknown}|null;
+  const decoded=await readBoundedJson(c.req.raw.body,8*1024);
+  if(!decoded.ok)return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const body=decoded.value as {password?:unknown;confirm_username?:unknown}|null;
   if(typeof body?.password!=="string" || typeof body.confirm_username!=="string" ||
      body.password.length<1 || body.password.length>256 || body.confirm_username.length>32)
     return c.json({error:"confirmation_required"},400);

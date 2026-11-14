@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../bindings";
 import { bearerPayload } from "../lib/authBearer";
+import { readBoundedJson } from "../lib/boundedJson";
 import { parseAccountPantry, validPantryRevision, type AccountPantryItem } from "../lib/pantrySync";
 
 export const mePantry=new Hono<{Bindings:Env}>();
@@ -27,7 +28,9 @@ mePantry.get("/me/pantry",async c=>{
 mePantry.put("/me/pantry",async c=>{
   const jwt=await bearerPayload(c);
   if(!jwt) return c.json({error:"unauthorized"},401);
-  const body=await c.req.json().catch(()=>null) as {items?:unknown;expected_revision?:unknown}|null;
+  const decoded=await readBoundedJson(c.req.raw.body,128*1024);
+  if(!decoded.ok)return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const body=decoded.value as {items?:unknown;expected_revision?:unknown}|null;
   if(!body || !validPantryRevision(body.expected_revision)) return c.json({error:"invalid_revision"},400);
   const items=parseAccountPantry(body.items);
   if(!items) return c.json({error:"invalid_pantry_items"},400);

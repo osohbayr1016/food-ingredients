@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../../bindings";
 import { parseTagName } from "../../lib/editorialInputs";
 import { d1ErrorMessage } from "../../lib/d1Errors";
+import { readBoundedJson } from "../../lib/boundedJson";
 
 export const tagsAdmin = new Hono<{ Bindings: Env }>();
 
@@ -13,7 +14,9 @@ tagsAdmin.get("/tags", async (c) => {
 });
 
 tagsAdmin.post("/tags", async (c) => {
-  const body = await c.req.json().catch(() => null) as { name?: unknown } | null;
+  const decoded = await readBoundedJson(c.req.raw.body,8*1024);
+  if (!decoded.ok) return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const body = decoded.value as { name?: unknown } | null;
   const name = parseTagName(body?.name);
   if (!name) return c.json({ error: "invalid_tag_name" }, 400);
   try {
