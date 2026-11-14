@@ -9,6 +9,7 @@ import { signJwt } from "../lib/jwtHs256";
 import { hashPassword, verifyPassword } from "../lib/password";
 import { checkAuthRateLimit } from "../lib/authRateLimit";
 import { parseCredentials } from "../lib/authInput";
+import { readBoundedJson } from "../lib/boundedJson";
 
 const USER_RE = /^[a-zA-Z0-9_]{3,32}$/;
 const TTL_SEC = 60 * 60 * 24 * 14;
@@ -20,7 +21,10 @@ function jwtSecretOk(s: string | undefined): s is string {
 export const auth = new Hono<{ Bindings: Env }>();
 
 auth.post("/auth/register", async (c) => {
-  const input=parseCredentials(await c.req.json().catch(()=>null));
+  // Authentication payloads never need multi-megabyte request bodies.
+  const decoded = await readBoundedJson(c.req.raw.body, 8 * 1024);
+  if (!decoded.ok) return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const input=parseCredentials(decoded.value);
   if(!input)return c.json({error:"credentials_required"},400);
   const {username,password}=input;
   if (!jwtSecretOk(c.env.JWT_SECRET)) {
@@ -87,7 +91,10 @@ auth.post("/auth/register", async (c) => {
 });
 
 auth.post("/auth/login", async (c) => {
-  const input=parseCredentials(await c.req.json().catch(()=>null));
+  // Authentication payloads never need multi-megabyte request bodies.
+  const decoded = await readBoundedJson(c.req.raw.body, 8 * 1024);
+  if (!decoded.ok) return c.json({error:decoded.error},decoded.error==="payload_too_large"?413:400);
+  const input=parseCredentials(decoded.value);
   if(!input)return c.json({error:"credentials_required"},400);
   const username=input.username.toLowerCase(), password=input.password;
   if (!jwtSecretOk(c.env.JWT_SECRET)) {
