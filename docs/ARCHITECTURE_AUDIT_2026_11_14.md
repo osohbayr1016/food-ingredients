@@ -132,3 +132,55 @@ real-device, staging, privacy, product-safety or recovery testing.
 **Release state:** GitHub main includes the listed code PRs; no Cloudflare
 production deploy, remote D1 migration, live R2 change or customer-data
 mutation was performed in this audit. The remaining P0/P1 items are not complete.
+
+---
+
+## Third-pass audit — 2026-11-14
+
+The third pass verified main after #36, inspected new code against prior changes and
+continued with focused, CI-tested changes. Keep the release gate separate from GitHub merges.
+
+| PR | Implementation | Reason |
+| --- | --- | --- |
+| #37 | Bounded streaming JSON for auth, suggestion, nutrition and admin recipe writes | Avoid buffering unbounded external requests |
+| #38 | Duplicate ingredient/step ID checks, safe license metadata | Avoid unexpected D1 primary-key conflicts and type errors |
+| #39 | Optional 0–1 missing ingredient recipe filter | Pantry-first discovery without claiming unknown quantities are safe |
+| #40 | Primitive-only pantry parsing and strict suggestion filters | Avoid hostile nested JSON coercion and silently ignored search constraints |
+| #41 | Request budgets for pantry, history, favorites, account deletion and admin forms | Cover remaining high-risk writes while allowing full multilingual pantry snapshots |
+| #42 | Deterministic SQL/JS suggestion sorting | Stable ranking for equal match ratios; eliminate redundant filter |
+| #43 | Strict public search facet lengths and no silent query truncation | Explicit, predictable search contract |
+
+### Design and product backlog after these fixes
+
+**Priority 0:** staging environment with realistic but non-customer D1/R2;
+run browser/mobile E2E, security and accessibility reviews; confirm credentials
+and backup/restore runbook; verify licensed food/photo data before any autopublish.
+These need external access, operational approval and reproducible evidence,
+not a speculative code-only "done" label.
+
+**Priority 1:** move from browser-local JWTs to a same-origin HttpOnly session/BFF
+with CSRF protection; replace the deprecated Cloudflare Next adapter after parity
+checks; isolate device-local guest data from signed-in account data on shared
+browsers; build nutrition/allergen provenance validation and ingredient unit QA.
+Do not merge infrastructure auth rewrites without staged rollout/rollback.
+
+**Priority 2:** reusable weekly meal-plan templates (Paprika/Samsung Food pattern),
+deterministic conflict preview for cross-device revisions, household permission
+roles, pantry expiry-first suggestions, shopping category grouping, and bilingual
+query evaluation (including Mongolian romanization). These are follow-on product
+features, not blockers to the current source-code-only safety improvements.
+
+### Architectural principles
+
+- **Explicit trust boundaries:** bounded streams at ingress, typed API contracts,
+  safe SQL bindings, privacy-preserving responses and no inferred food safety.
+- **Stable data ownership:** D1 snapshots keyed by user and ISO week, atomic
+  revision checks, manual merge when conflicting, and auditable account exports.
+- **Reliable release gates:** code checks + browser E2E + D1 migration rehearsals
+  + recovery/rollback before any manually approved production deploy.
+- **Small product feedback loops:** pantry usability and recipe discovery before
+  heavier AI features or source-ingestion scale.
+
+The comparator products are SuperCook (ingredient-first discovery),
+Samsung Food (meal planning and grocery coordination) and Paprika
+(recipe library, grocery and reusable meal-planning convenience).
