@@ -41,6 +41,8 @@ jobs:
         run: node --experimental-strip-types --test apps/api/tests/jwt-session.test.mjs
       - name: Account pantry validation tests
         run: node --experimental-strip-types --test apps/api/tests/pantry-sync.test.mjs
+      - name: Account meal plan snapshot validation tests
+        run: node --experimental-strip-types --test apps/api/tests/meal-plan-sync.test.mjs
       - name: Pantry inventory unit tests
         run: node --experimental-strip-types --test apps/web/tests/pantry-inventory.test.mjs
       - name: Account-deletion rate limit policy tests
